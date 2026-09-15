@@ -126,9 +126,12 @@ no Postgres and no extra services.
 - Next.js 16 (App Router, TypeScript), deployed as a single Fly machine
   behind a custom Node server (`server.ts`) so WebSocket upgrades can be
   proxied. `proxy.ts` (Next 16's name for middleware) handles session gating.
-- UI built entirely with **shadcn/ui** on Tailwind CSS: every form, table,
-  dialog and button is a shadcn component or composed from them. No second
-  component library, no hand-rolled equivalents of things shadcn provides.
+- UI built entirely with **shadcn/ui** on Tailwind CSS, with **Base UI**
+  (`@base-ui/react`, by the MUI team and Radix's original authors) as the
+  primitive layer, which is shadcn's default since July 2026. Every form,
+  table, dialog and button is a shadcn component or composed from them. No
+  Radix, no second component library, no hand-rolled equivalents of things
+  shadcn provides.
 - BetterAuth 1.7 with the **email OTP** plugin. Six-digit code, sent through
   Resend from `notifications.alversjo.land` (verified in Resend; its DNS records are in the zone). Cookies are set for
   `.alversjo.land` via `advanced.crossSubDomainCookies` so a session made on
