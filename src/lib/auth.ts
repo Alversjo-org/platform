@@ -58,6 +58,13 @@ export type Auth = ReturnType<typeof buildAuth>;
 
 let authPromise: Promise<Auth> | undefined;
 export function getAuth(): Promise<Auth> {
-  authPromise ??= getDb().then((db) => buildAuth(db));
+  // Same as getDb(): a failed build (usually an unreachable database) must not be
+  // cached, or every later request in this process inherits it.
+  authPromise ??= getDb()
+    .then((db) => buildAuth(db))
+    .catch((e) => {
+      authPromise = undefined;
+      throw e;
+    });
   return authPromise;
 }

@@ -1,5 +1,5 @@
 // Creates the protected admin box. Run on the platform machine, which has every secret:
-//   fly ssh console -a alversjo-platform -C "npx tsx scripts/create-admin-box.ts owner@example.org"
+//   fly ssh console -a alversjo-platform -C "sh -c 'cd /app && npx tsx /app/scripts/create-admin-box.ts owner@example.org'"
 import { eq } from 'drizzle-orm';
 import { schema } from '../src/db';
 import { boxDeps } from '../src/lib/boxes/deps';

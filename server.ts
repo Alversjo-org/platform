@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import next from 'next';
 import { forwardHttp, forwardUpgrade, type Target } from './src/box-proxy/forward';
-import { parseBoxHost } from './src/box-proxy/host';
+import { isBoxesSubdomain, parseBoxHost } from './src/box-proxy/host';
 import { forbiddenPageHtml, notFoundPageHtml, notReadyPageHtml, stoppedPageHtml, unavailablePageHtml } from './src/box-proxy/pages';
 import { resolveBoxSession } from './src/box-proxy/session';
 import { enterPageHtml } from './src/lib/boxes/cloudcli-token';
@@ -23,7 +23,11 @@ function targetFor(machineId: string): Target {
   return { host: `${machineId}.vm.${boxesApp}.internal`, port: 8080 };
 }
 
-const html = (status: number, body: string) => ({ status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }, body });
+// The proxy's own responses (redirects, error and hand-off pages) are never meant to
+// be framed. Relayed box responses keep whatever the box sent, untouched.
+const frameGuard = { 'x-frame-options': 'DENY', 'content-security-policy': "frame-ancestors 'none'" };
+
+const html = (status: number, body: string) => ({ status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...frameGuard }, body });
 
 /** Probes CloudCLI's auth-status endpoint before handing out a token: tells a dead box apart from one still finishing its first boot. */
 async function probeBoxStatus(target: Target): Promise<{ reachable: boolean; needsSetup: boolean }> {
@@ -47,12 +51,22 @@ app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     try {
       const parsed = parseBoxHost(req.headers.host, boxesDomain);
-      if (!parsed) return handle(req, res);
+      if (!parsed) {
+        // A host under the boxes domain that is not a valid box id is a dead box
+        // hostname, not a platform request: Next.js must never serve the platform UI
+        // on a box origin.
+        if (isBoxesSubdomain(req.headers.host, boxesDomain)) {
+          const r = html(404, notFoundPageHtml());
+          res.writeHead(r.status, r.headers);
+          return res.end(r.body);
+        }
+        return await handle(req, res);
+      }
       const { host } = parsed;
       const s = await resolveBoxSession({ host, cookie: req.headers.cookie, internalUrl, secret });
       const reply = (r: { status: number; headers: Record<string, string>; body: string }) => { res.writeHead(r.status, r.headers); res.end(r.body); };
       switch (s.status) {
-        case 'unauthenticated': res.writeHead(302, { location: `${platformUrl}/login` }); return res.end();
+        case 'unauthenticated': res.writeHead(302, { location: `${platformUrl}/login`, ...frameGuard }); return res.end();
         case 'forbidden': return reply(html(403, forbiddenPageHtml()));
         case 'not_found': return reply(html(404, notFoundPageHtml()));
         case 'unavailable': return reply(html(502, unavailablePageHtml()));
