@@ -28,7 +28,7 @@ and must not leak into v0.
 |---|---|---|
 | GitHub repo | `Alversjo-org/box` (renamed from `admin-box`) | Docker image every box runs |
 | GitHub repo | `Alversjo-org/platform` | Next.js control plane, this spec |
-| GitHub repo | `Alversjo-org/dns` | `dnsconfig.js` for `alversjo.land`, pushed by CI with dnscontrol |
+| GitHub repo | `Alversjo-org/infrastructure` | `dnsconfig.js` for `alversjo.land` (pushed by CI with dnscontrol); later any other infra config |
 | Fly app | `alversjo-platform` | Runs the platform, one machine, attached Fly Postgres |
 | Fly app | `alversjo-boxes` | Holds every box as one machine plus one volume |
 | Fly app | `alversjo-admin-box` | **Deleted** once the admin box is recreated inside `alversjo-boxes` |
@@ -54,10 +54,10 @@ hand in the Cloudflare UI.
 
 | Name | Record | Purpose |
 |---|---|---|
-| `platform.alversjo.land` | A + AAAA to the platform's Fly IPs | the platform |
+| `members.alversjo.land` | A + AAAA to the platform's Fly IPs | the platform (membership site) |
 | `*.boxes.alversjo.land` | A + AAAA to the same Fly IPs | one hostname per box, e.g. `<box-id>.boxes.alversjo.land` |
 | `_acme-challenge.boxes.alversjo.land` | CNAME to the target `fly certs add` prints | DNS-01 validation for the wildcard cert |
-| `_acme-challenge.platform.alversjo.land` | CNAME likewise | validation for the platform cert |
+| `_acme-challenge.members.alversjo.land` | CNAME likewise | validation for the platform cert |
 
 All Fly-facing records are DNS-only (not Cloudflare-proxied), because Fly
 terminates TLS. The platform app gets a **dedicated IPv4** (about 2 USD per
@@ -65,7 +65,7 @@ month) since wildcard certificates on Fly's shared IPv4 are not documented as
 supported. Fly issues the wildcard certificate `*.boxes.alversjo.land`
 (about 2 USD per month).
 
-The `dns` repo holds `dnsconfig.js` and a `creds.json` that reads the token
+The `infrastructure` repo holds `dnsconfig.js` and a `creds.json` that reads the token
 from the env var `CLOUDFLARE_API_TOKEN`. CI on `main` runs
 `dnscontrol push`; pull requests run `dnscontrol preview`. The Cloudflare
 token is an account-owned token with DNS edit rights on the zone, so
@@ -79,7 +79,7 @@ Code). Additions:
 - **CloudCLI** (`@cloudcli-ai/cloudcli`, pinned, 1.37.3 at time of writing)
   installed globally. `CLAUDE_CLI_PATH` points at the system `claude`.
 - **dnscontrol** (pinned binary) so admin boxes can preview and push DNS
-  from a clone of the `dns` repo.
+  from a clone of the `infrastructure` repo.
 - **Superpowers** plugin preinstalled at build time with
   `claude plugin marketplace add anthropics/claude-plugins-official` and
   `claude plugin install superpowers@claude-plugins-official` (both work
@@ -130,9 +130,9 @@ no Postgres and no extra services.
   dialog and button is a shadcn component or composed from them. No second
   component library, no hand-rolled equivalents of things shadcn provides.
 - BetterAuth 1.7 with the **email OTP** plugin. Six-digit code, sent through
-  Resend from `notifications.theborderland.se`. Cookies are set for
+  Resend from `notifications.alversjo.land` (verified in Resend; its DNS records are in the zone). Cookies are set for
   `.alversjo.land` via `advanced.crossSubDomainCookies` so a session made on
-  `platform.alversjo.land` is valid on `<box>.boxes.alversjo.land`.
+  `members.alversjo.land` is valid on `<box>.boxes.alversjo.land`.
 - Drizzle ORM. Same schema for Fly Postgres (prod) and PGlite (dev boxes).
   `DATABASE_URL` decides: `postgres://...` uses the pg driver, unset or
   `pglite://<path>` uses the PGlite driver with a file under `/work`.
@@ -213,7 +213,7 @@ its own hostname `<box-id>.boxes.alversjo.land` and the proxy routes on the
    Next.js.
 2. The box proxy reads the BetterAuth session cookie (valid across
    subdomains), loads the session, and checks `box_access` or admin role.
-   Without a session it redirects to `https://platform.alversjo.land/login`.
+   Without a session it redirects to `https://members.alversjo.land/login`.
    Without access it answers 403.
 3. Path `/__enter` (the link the platform's "Open" button points at) mints
    a CloudCLI JWT with the box's `jwt_secret` (payload `{userId, username}`
@@ -238,8 +238,7 @@ crown jewel and lives only in Fly secrets.
 `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `FLY_API_TOKEN`,
 `ADMIN_EMAILS`, `CLOUDFLARE_API_TOKEN`, and the tokens to inject into boxes:
 `BOX_CLAUDE_TOKEN`, `BOX_GH_TOKEN_ADMIN`, `BOX_GH_TOKEN_CONTRIBUTOR`. All via
-`fly secrets`, none in the repo. The Resend and Cloudflare tokens that were
-shared in chat are rotated after first deploy.
+`fly secrets`, none in the repo.
 
 ## 5. Testing
 
@@ -258,7 +257,7 @@ shared in chat are rotated after first deploy.
 0. Manual prerequisites: make the three repos public, enable branch
    protection on `main`, create the `alversjo-contributor` bot account and
    its fine-grained token, allocate the dedicated IPv4.
-1. `dns` repo: import the current zone into `dnsconfig.js`, add the
+1. `infrastructure` repo: import the current zone into `dnsconfig.js`, add the
    platform and boxes records, CI with `dnscontrol preview` / `push`.
 2. `box` repo: CloudCLI, dnscontrol, superpowers, profiles, entrypoint.
    Build and push the image to Fly's registry as
