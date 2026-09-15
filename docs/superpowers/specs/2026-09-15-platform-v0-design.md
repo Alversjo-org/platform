@@ -1,6 +1,8 @@
 # Alversjö platform v0 — design
 
-Date: 2026-09-15. Status: approved in brainstorming, awaiting implementation plan.
+Date: 2026-09-15. Status: approved in brainstorming, revised the same day after
+verifying CloudCLI, GitHub and Fly constraints. Implementation plans live in
+`docs/superpowers/plans/` of each repo.
 
 ## 1. Purpose
 
@@ -13,9 +15,12 @@ v0 does **not** store memberships or talk to Stripe. It does three things:
 3. Lets anyone with access open a box's CloudCLI session in the browser,
    through the platform, with no second login.
 
+4. Manages the `alversjo.land` DNS zone with dnscontrol, from a repo and
+   from admin boxes.
+
 Everything else from the original discussion (membership import, Stripe,
-Borderland map hosting, dnscontrol, per-service templates) is explicitly out
-of scope and must not leak into v0.
+Borderland map hosting, per-service templates) is explicitly out of scope
+and must not leak into v0.
 
 ## 2. Repos and Fly apps
 
@@ -23,6 +28,7 @@ of scope and must not leak into v0.
 |---|---|---|
 | GitHub repo | `Alversjo-org/box` (renamed from `admin-box`) | Docker image every box runs |
 | GitHub repo | `Alversjo-org/platform` | Next.js control plane, this spec |
+| GitHub repo | `Alversjo-org/dns` | `dnsconfig.js` for `alversjo.land`, pushed by CI with dnscontrol |
 | Fly app | `alversjo-platform` | Runs the platform, one machine, attached Fly Postgres |
 | Fly app | `alversjo-boxes` | Holds every box as one machine plus one volume |
 | Fly app | `alversjo-admin-box` | **Deleted** once the admin box is recreated inside `alversjo-boxes` |
@@ -32,18 +38,52 @@ of *machines*. Keeping boxes in their own app means platform deploys never
 touch running boxes, and the proxy reaches any box at
 `<machine-id>.vm.alversjo-boxes.internal` over the org's private network.
 
-Rule inherited from the box repo: every change to either repo is committed
+All three repos are **public**. Nothing secret is ever committed to them;
+public visibility is what makes GitHub branch protection available on the
+free org plan (see §3, contributor profile).
+
+Rule inherited from the box repo: every change to any repo is committed
 and pushed immediately.
+
+### 2.1 Domain and DNS
+
+Domain: `alversjo.land`, zone on Cloudflare (free plan, account "Alversjö",
+already active, currently a wildcard pointing at the old Hostpoint host plus
+Resend DKIM records). Records are managed only through dnscontrol, never by
+hand in the Cloudflare UI.
+
+| Name | Record | Purpose |
+|---|---|---|
+| `platform.alversjo.land` | A + AAAA to the platform's Fly IPs | the platform |
+| `*.boxes.alversjo.land` | A + AAAA to the same Fly IPs | one hostname per box, e.g. `<box-id>.boxes.alversjo.land` |
+| `_acme-challenge.boxes.alversjo.land` | CNAME to the target `fly certs add` prints | DNS-01 validation for the wildcard cert |
+| `_acme-challenge.platform.alversjo.land` | CNAME likewise | validation for the platform cert |
+
+All Fly-facing records are DNS-only (not Cloudflare-proxied), because Fly
+terminates TLS. The platform app gets a **dedicated IPv4** (about 2 USD per
+month) since wildcard certificates on Fly's shared IPv4 are not documented as
+supported. Fly issues the wildcard certificate `*.boxes.alversjo.land`
+(about 2 USD per month).
+
+The `dns` repo holds `dnsconfig.js` and a `creds.json` that reads the token
+from the env var `CLOUDFLARE_API_TOKEN`. CI on `main` runs
+`dnscontrol push`; pull requests run `dnscontrol preview`. The Cloudflare
+token is an account-owned token with DNS edit rights on the zone, so
+`creds.json` also carries the Cloudflare account id (not secret).
 
 ## 3. Box image (`Alversjo-org/box`)
 
 Builds on the existing Dockerfile (Debian, pinned flyctl, gh, Node, Claude
 Code). Additions:
 
-- **CloudCLI** (`@cloudcli-ai/cloudcli`, pinned version) installed globally.
-  `CLAUDE_CLI_PATH` points at the system `claude`.
-- **Superpowers** plugin preinstalled into `/root/.claude` at build time so
-  every Claude session on a box has it without setup.
+- **CloudCLI** (`@cloudcli-ai/cloudcli`, pinned, 1.37.3 at time of writing)
+  installed globally. `CLAUDE_CLI_PATH` points at the system `claude`.
+- **dnscontrol** (pinned binary) so admin boxes can preview and push DNS
+  from a clone of the `dns` repo.
+- **Superpowers** plugin preinstalled at build time with
+  `claude plugin marketplace add anthropics/claude-plugins-official` and
+  `claude plugin install superpowers@claude-plugins-official` (both work
+  without login), so every Claude session on a box has it.
 - **Two profiles**, chosen by env var `BOX_PROFILE=admin|contributor`.
   The entrypoint copies `profiles/<profile>/CLAUDE.md` to `/work/CLAUDE.md`
   on every boot. The admin profile allows anything. The contributor profile
@@ -64,11 +104,17 @@ Secrets are never in the image. They arrive as machine env at creation:
 | `GH_TOKEN` | full org token | fine-grained token: contents read, pull requests write, no `main` push | gh + git |
 | `FLY_API_TOKEN` | yes | no | operate the Fly org |
 | `RESEND_API_KEY` | yes | no | needed to run the platform locally |
+| `CLOUDFLARE_API_TOKEN` | yes | no | dnscontrol against `alversjo.land` |
 | `JWT_SECRET` | yes | yes | per-box, generated by the platform |
 | `BOX_PROFILE` | `admin` | `contributor` | profile selection |
 
-"No push to `main`" is enforced by branch protection on the org's repos, not
-only by the token. The prompt in CLAUDE.md is a courtesy, not the control.
+"No push to `main`" is enforced by branch protection ("require a pull
+request before merging", not enforced for admins) on all three public
+repos. A personal token acts as its owner, and org owners bypass protection,
+so the contributor token **must belong to a non-owner bot account**
+(`alversjo-contributor`, an org member with write access to the repos).
+Creating that account and its fine-grained token is a manual step. The
+prompt in CLAUDE.md is a courtesy, not the control.
 
 Contributor boxes can run the platform locally against PGlite, so they need
 no Postgres and no extra services.
@@ -77,12 +123,16 @@ no Postgres and no extra services.
 
 ### 4.1 Stack
 
-- Next.js (App Router, TypeScript), deployed as a single Fly machine.
+- Next.js 16 (App Router, TypeScript), deployed as a single Fly machine
+  behind a custom Node server (`server.ts`) so WebSocket upgrades can be
+  proxied. `proxy.ts` (Next 16's name for middleware) handles session gating.
 - UI built entirely with **shadcn/ui** on Tailwind CSS: every form, table,
   dialog and button is a shadcn component or composed from them. No second
   component library, no hand-rolled equivalents of things shadcn provides.
-- BetterAuth with the **email OTP** plugin. Six-digit code, sent through
-  Resend from `notifications.theborderland.se`.
+- BetterAuth 1.7 with the **email OTP** plugin. Six-digit code, sent through
+  Resend from `notifications.theborderland.se`. Cookies are set for
+  `.alversjo.land` via `advanced.crossSubDomainCookies` so a session made on
+  `platform.alversjo.land` is valid on `<box>.boxes.alversjo.land`.
 - Drizzle ORM. Same schema for Fly Postgres (prod) and PGlite (dev boxes).
   `DATABASE_URL` decides: `postgres://...` uses the pg driver, unset or
   `pglite://<path>` uses the PGlite driver with a file under `/work`.
@@ -154,25 +204,30 @@ deleted. Nothing on its volume needs to survive.
 
 ### 4.6 Box proxy
 
-Route `/box/[id]/[...path]` in the platform:
+CloudCLI has no base-path support (verified in its source), so each box gets
+its own hostname `<box-id>.boxes.alversjo.land` and the proxy routes on the
+`Host` header instead of a path prefix. Nothing is rewritten.
 
-1. Middleware checks the session and a `box_access` row (or admin role).
-2. On the bare `/box/[id]` URL the platform mints a CloudCLI JWT with the
-   box's `jwt_secret` (payload `{userId, username}` of the seeded CloudCLI
-   user, 7-day expiry, same shape CloudCLI itself issues) and serves a tiny
-   page that writes it to `localStorage['auth-token']` and redirects to
-   `/box/[id]/`. CloudCLI's client then authenticates itself as usual.
-3. All other requests, including WebSocket upgrades, are forwarded verbatim
-   to `http://[<machine-id>.vm.alversjo-boxes.internal]:8080` with the path
-   prefix stripped. The forwarder is a small Node HTTP proxy in a custom
-   `server.ts` because Next.js route handlers cannot pass WebSocket upgrades.
-4. A stopped box gets a "start it?" page for admins and a "not running"
+1. The custom `server.ts` looks at every incoming request's `Host`. Hosts
+   under `boxes.alversjo.land` go to the box proxy; everything else goes to
+   Next.js.
+2. The box proxy reads the BetterAuth session cookie (valid across
+   subdomains), loads the session, and checks `box_access` or admin role.
+   Without a session it redirects to `https://platform.alversjo.land/login`.
+   Without access it answers 403.
+3. Path `/__enter` (the link the platform's "Open" button points at) mints
+   a CloudCLI JWT with the box's `jwt_secret` (payload `{userId, username}`
+   of the seeded CloudCLI user, 7-day expiry, same shape CloudCLI itself
+   issues) and serves a tiny page that writes it to
+   `localStorage['auth-token']` and redirects to `/`. CloudCLI's client
+   then authenticates itself as usual.
+4. All other requests, including WebSocket upgrades, are forwarded verbatim
+   to `http://[<machine-id>.vm.alversjo-boxes.internal]:8080`. Upgrades use
+   a hand-rolled forwarder on Node's `http` module (no `http-proxy`
+   dependency); Next.js's own upgrade listener ignores hosts it does not
+   route.
+5. A stopped box gets a "start it?" page for admins and a "not running"
    page for members.
-
-CloudCLI needs a base-path setting for the `/box/[id]` prefix; if the pinned
-version lacks one, the proxy rewrites absolute paths in HTML and the client
-is configured via `VITE_BASE_PATH` at image build time. The implementation
-plan must verify which applies.
 
 `jwt_secret` is stored plain in Postgres for v0. It only grants access to a
 box that the platform already fully controls; the Fly token is the real
@@ -181,10 +236,10 @@ crown jewel and lives only in Fly secrets.
 ### 4.7 Secrets on the platform machine
 
 `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `FLY_API_TOKEN`,
-`ADMIN_EMAILS`, and the tokens to inject into boxes: `BOX_CLAUDE_TOKEN`,
-`BOX_GH_TOKEN_ADMIN`, `BOX_GH_TOKEN_CONTRIBUTOR`. All via `fly secrets`,
-none in the repo. The Resend key that was shared in chat is rotated after
-first deploy.
+`ADMIN_EMAILS`, `CLOUDFLARE_API_TOKEN`, and the tokens to inject into boxes:
+`BOX_CLAUDE_TOKEN`, `BOX_GH_TOKEN_ADMIN`, `BOX_GH_TOKEN_CONTRIBUTOR`. All via
+`fly secrets`, none in the repo. The Resend and Cloudflare tokens that were
+shared in chat are rotated after first deploy.
 
 ## 5. Testing
 
@@ -200,15 +255,23 @@ first deploy.
 
 ## 6. Deployment order
 
-1. `box` repo: CloudCLI, superpowers, profiles, entrypoint. Build and push
-   image to Fly's registry as `registry.fly.io/alversjo-boxes:<git-sha>`.
-2. `platform` repo: auth + schema + migrations + CI. Deploy to
-   `alversjo-platform` with Postgres attached.
-3. Fleet manager + proxy. Recreate the admin box inside `alversjo-boxes`,
+0. Manual prerequisites: make the three repos public, enable branch
+   protection on `main`, create the `alversjo-contributor` bot account and
+   its fine-grained token, allocate the dedicated IPv4.
+1. `dns` repo: import the current zone into `dnsconfig.js`, add the
+   platform and boxes records, CI with `dnscontrol preview` / `push`.
+2. `box` repo: CloudCLI, dnscontrol, superpowers, profiles, entrypoint.
+   Build and push the image to Fly's registry as
+   `registry.fly.io/alversjo-boxes:<git-sha>` (images are readable across
+   apps of the same org).
+3. `platform` repo: auth + schema + migrations + CI. Deploy to
+   `alversjo-platform` with Postgres attached, certificates issued.
+4. Fleet manager + proxy. Recreate the admin box inside `alversjo-boxes`,
    verify access through the platform, delete `alversjo-admin-box`.
 
 ## 7. Deferred, on purpose
 
 Membership import and Stripe, box templates per service (map etc.),
-dnscontrol, promoting admins from the UI, email-change UI, encrypting
-`jwt_secret`, multiple regions, box resizing.
+promoting admins from the UI, email-change UI, encrypting `jwt_secret`,
+multiple regions, box resizing, replacing the bot-account token with a
+GitHub App that mints short-lived tokens.
