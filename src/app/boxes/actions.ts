@@ -8,7 +8,6 @@ import {
   BoxNotFoundError,
   createBox,
   destroyBox,
-  ProtectedBoxError,
   revokeBox,
   shareBox,
   startBox,
@@ -19,7 +18,7 @@ import { requireAdmin } from '@/lib/session';
 
 /** Message for errors we expect and want to surface as an alert, rather than crashing to Next's error page. */
 function knownMessage(e: unknown): string | undefined {
-  if (e instanceof UserNotFoundError || e instanceof ProtectedBoxError || e instanceof BoxNotFoundError) return e.message;
+  if (e instanceof UserNotFoundError || e instanceof BoxNotFoundError) return e.message;
   return undefined;
 }
 

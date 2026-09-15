@@ -10,9 +10,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { canAccessBox } from '@/lib/boxes/access';
+import { boxDeps } from '@/lib/boxes/deps';
+import { liveState, stateBadgeVariant } from '@/lib/boxes/live';
 import { boxOpenUrl } from '@/lib/boxes/urls';
 import { requireUser } from '@/lib/session';
+import type { Box } from '@/db/schema';
+import type { FlyMachineState } from '@/lib/fly';
 import { destroyBoxAction, revokeBoxAction, shareBoxAction, startBoxAction, stopBoxAction } from '../actions';
+
+async function getLiveState(box: Box): Promise<FlyMachineState | 'unknown'> {
+  try {
+    const deps = await boxDeps();
+    return await liveState(deps.fly, box);
+  } catch {
+    // No Fly client available (e.g. a dev box without FLY_API_TOKEN).
+    return 'unknown';
+  }
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +49,7 @@ export default async function BoxPage({
     .innerJoin(schema.user, eq(schema.user.id, schema.boxAccess.userId))
     .where(eq(schema.boxAccess.boxId, id));
   const isAdmin = user.role === 'admin';
+  const state = await getLiveState(box);
 
   return (
     <AppShell user={user}>
@@ -44,7 +59,7 @@ export default async function BoxPage({
         </Alert>
       )}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{box.name} {box.protected && <Badge variant="secondary">protected</Badge>}</h1>
+        <h1 className="text-xl font-semibold">{box.name}</h1>
         <Button render={<a href={boxOpenUrl(box.id)} />}>Open</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -52,16 +67,20 @@ export default async function BoxPage({
           <CardHeader><CardTitle>Machine</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p>Profile: <Badge variant="outline">{box.profile}</Badge></p>
-            <p>Status: {box.status}</p>
+            <p>Status: <Badge variant={stateBadgeVariant(state)}>{state}</Badge></p>
             <p>Host: <code>{box.id}.{process.env.BOXES_DOMAIN ?? 'boxes.localhost'}</code></p>
             <p className="text-muted-foreground">Fly machine {box.flyMachineId ?? '—'}, volume {box.flyVolumeId ?? '—'}</p>
             {isAdmin && (
               <div className="flex gap-2">
-                <form action={startBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="outline">Start</Button></form>
-                <form action={stopBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="outline">Stop</Button></form>
-                {!box.protected && (
-                  <form action={destroyBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="destructive">Destroy</Button></form>
+                {(state === 'stopped' || state === 'suspended' || state === 'created') && (
+                  <form action={startBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="outline">Start</Button></form>
                 )}
+                {state === 'started' && (
+                  <form action={stopBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="outline">Stop</Button></form>
+                )}
+                {state === 'starting' && <Button size="sm" variant="outline" disabled>Starting…</Button>}
+                {state === 'stopping' && <Button size="sm" variant="outline" disabled>Stopping…</Button>}
+                <form action={destroyBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="destructive">Destroy</Button></form>
               </div>
             )}
           </CardContent>
