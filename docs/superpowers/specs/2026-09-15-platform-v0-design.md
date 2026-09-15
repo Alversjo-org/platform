@@ -78,6 +78,9 @@ no Postgres and no extra services.
 ### 4.1 Stack
 
 - Next.js (App Router, TypeScript), deployed as a single Fly machine.
+- UI built entirely with **shadcn/ui** on Tailwind CSS: every form, table,
+  dialog and button is a shadcn component or composed from them. No second
+  component library, no hand-rolled equivalents of things shadcn provides.
 - BetterAuth with the **email OTP** plugin. Six-digit code, sent through
   Resend from `notifications.theborderland.se`.
 - Drizzle ORM. Same schema for Fly Postgres (prod) and PGlite (dev boxes).
