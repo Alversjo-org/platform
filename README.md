@@ -111,16 +111,8 @@ image.
 
 ## Creating the admin box
 
-The admin box is `protected: true` and cannot be destroyed from the UI, so it
-is created by a script run on the platform machine, which already holds every
-secret:
-
-```bash
-fly ssh console -a alversjo-platform -C "sh -c 'cd /app && npx tsx /app/scripts/create-admin-box.ts owner@example.org'"
-```
-
-The owner email must have logged in at least once (the script needs a user
-row), and it refuses to run if a protected box already exists.
+The admin box is an ordinary box with profile `admin`; create it from the
+Boxes page.
 
 ## Known limitations (v0)
 

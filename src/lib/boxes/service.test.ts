@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { FlyMachine } from '@/lib/fly';
 import { canAccessBox, listBoxesFor } from './access';
-import { createBox, destroyBox, ProtectedBoxError, revokeBox, shareBox, startBox, stopBox, UserNotFoundError, type BoxDeps, type FlyOps } from './service';
+import { createBox, destroyBox, revokeBox, shareBox, startBox, stopBox, UserNotFoundError, type BoxDeps, type FlyOps } from './service';
 
 function fakeFly() {
   const calls: string[] = [];
@@ -40,7 +40,7 @@ describe('box service', () => {
 
   it('createBox provisions volume + machine and grants the owner access', async () => {
     const box = await createBox(deps, { name: 'Test', profile: 'contributor', ownerUserId: 'admin' });
-    expect(box).toMatchObject({ id: 'abc123abc123', flyVolumeId: 'vol_box_abc123abc123', flyMachineId: 'm_box-abc123abc123', status: 'started', jwtSecret: 'jwt-secret', protected: false });
+    expect(box).toMatchObject({ id: 'abc123abc123', flyVolumeId: 'vol_box_abc123abc123', flyMachineId: 'm_box-abc123abc123', status: 'started', jwtSecret: 'jwt-secret' });
     expect(calls).toEqual(['createVolume box_abc123abc123', 'createMachine box-abc123abc123 contributor vol_box_abc123abc123']);
     expect(await canAccessBox(db, { id: 'admin', role: 'admin' }, box.id)).toBe(true);
     expect(await canAccessBox(db, { id: 'viktor', role: 'member' }, box.id)).toBe(false);
@@ -68,16 +68,9 @@ describe('box service', () => {
     expect(calls.slice(-2)).toEqual(['destroy m_box-abc123abc123', 'deleteVolume vol_box_abc123abc123']);
   });
 
-  it('protected boxes cannot be destroyed', async () => {
-    const box = await createBox(deps, { name: 'admin box', profile: 'admin', ownerUserId: 'admin', protected: true });
-    expect(box.protected).toBe(true); // set only once the machine exists, but set
-    await expect(destroyBox(deps, box.id)).rejects.toBeInstanceOf(ProtectedBoxError);
-    expect(await db.select().from(schema.boxes)).toHaveLength(1);
-  });
-
   it('a create that fails halfway leaves no rows and no volume behind', async () => {
     const failing: BoxDeps = { ...deps, fly: { ...deps.fly, async createMachine() { throw new Error('fly is down'); } } };
-    await expect(createBox(failing, { name: 'T', profile: 'admin', ownerUserId: 'admin', protected: true })).rejects.toThrow('fly is down');
+    await expect(createBox(failing, { name: 'T', profile: 'admin', ownerUserId: 'admin' })).rejects.toThrow('fly is down');
     expect(await db.select().from(schema.boxes)).toHaveLength(0);
     expect(await db.select().from(schema.boxAccess)).toHaveLength(0);
     expect(calls).toEqual(['createVolume box_abc123abc123', 'deleteVolume vol_box_abc123abc123']);

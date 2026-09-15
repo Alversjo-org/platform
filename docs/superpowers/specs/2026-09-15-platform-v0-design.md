@@ -154,7 +154,7 @@ Additional tables:
 ```
 user            (BetterAuth) + role: 'member' | 'admin'  default 'member'
 boxes           id, name, profile ('admin'|'contributor'), fly_machine_id,
-                fly_volume_id, status, protected bool, owner_user_id,
+                fly_volume_id, status, owner_user_id,
                 jwt_secret (encrypted at rest or plain, see 4.6), created_at
 box_access      box_id, user_id, granted_by_user_id, created_at   (PK box_id+user_id)
 ```
@@ -196,14 +196,15 @@ Actions, each a server action calling the Fly Machines API on
   §3, `restart.policy=always`. Insert `boxes` row, grant `box_access` to the
   creator.
 - **start / stop**: Fly machine start/stop, update `status`.
-- **destroy**: refused if `protected`. Otherwise destroy machine, delete
-  volume, delete rows.
+- **destroy**: destroy machine, delete volume, delete rows. Any box can be
+  destroyed by an admin, including the admin box; it can be recreated from
+  the UI.
 - **share**: add `box_access` for an existing user by email. **revoke**
   removes it. Owner and admins always have access.
 
 The existing admin box is recreated as the first machine in `alversjo-boxes`
-with `profile='admin'`, `protected=true`, then `alversjo-admin-box` is
-deleted. Nothing on its volume needs to survive.
+with `profile='admin'`, then `alversjo-admin-box` is deleted. Nothing on its
+volume needs to survive.
 
 ### 4.6 Box proxy
 

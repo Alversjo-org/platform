@@ -29,7 +29,7 @@ export default async function NewBoxPage({ searchParams }: { searchParams: Promi
           <form action={createBoxAction} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" required placeholder="viktor-map-experiments" />
+              <Input id="name" name="name" required placeholder="my-feature-box" />
             </div>
             <fieldset className="space-y-2">
               <Label>Profile</Label>

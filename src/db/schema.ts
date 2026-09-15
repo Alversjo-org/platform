@@ -60,7 +60,6 @@ export const boxes = pgTable('boxes', {
   flyMachineId: text('fly_machine_id'),
   flyVolumeId: text('fly_volume_id'),
   status: text('status').notNull().default('creating'), // last known Fly state
-  protected: boolean('protected').notNull().default(false),
   jwtSecret: text('jwt_secret').notNull(),
   ownerUserId: text('owner_user_id').notNull().references(() => user.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
