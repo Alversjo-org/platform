@@ -3,3 +3,7 @@ node_modules
 .pglite
 .git
 docs
+.env
+.env.*
+!.env.example
+.superpowers
