@@ -18,7 +18,7 @@ beforeAll(async () => {
     req.pipe(res); // echo body
   });
   upstream.on('upgrade', (req, socket) => {
-    socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n');
+    socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSet-Cookie: evil=1; Domain=localhost\r\n\r\n');
     socket.on('data', (d) => socket.write(`echo:${d}`));
   });
   await new Promise<void>((r) => upstream.listen(0, '127.0.0.1', r));
@@ -71,6 +71,20 @@ describe('forwardUpgrade', () => {
       req.on('error', reject);
       req.end();
     });
+    expect(reply).toBe('echo:ping');
+  });
+
+  it('never relays Set-Cookie from the target on the 101 handshake, and still relays data', async () => {
+    const { headers, reply } = await new Promise<{ headers: http.IncomingHttpHeaders; reply: string }>((resolve, reject) => {
+      const req = http.request({ host: '127.0.0.1', port: proxyPort(), path: '/ws', headers: { connection: 'Upgrade', upgrade: 'websocket' } });
+      req.on('upgrade', (res, socket) => {
+        socket.once('data', (d) => { resolve({ headers: res.headers, reply: d.toString() }); socket.destroy(); });
+        socket.write('ping');
+      });
+      req.on('error', reject);
+      req.end();
+    });
+    expect(headers['set-cookie']).toBeUndefined();
     expect(reply).toBe('echo:ping');
   });
 });

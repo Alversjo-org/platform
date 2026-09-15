@@ -17,6 +17,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const db = await getDb();
   const boxId = host.split('.')[0];
+  if (!/^[0-9a-f]{12}$/.test(boxId)) return Response.json({ status: 'not_found' } satisfies BoxSessionResult);
   const [box] = await db.select().from(schema.boxes).where(eq(schema.boxes.id, boxId));
   if (!box) return Response.json({ status: 'not_found' } satisfies BoxSessionResult);
 

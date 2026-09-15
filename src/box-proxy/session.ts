@@ -14,6 +14,10 @@ function pruneExpired(now: number): void {
 
 function cacheOk(key: string, result: BoxSessionResult, now: number): void {
   pruneExpired(now);
+  // Delete first so a refresh of an existing key moves it to the newest
+  // (last-inserted) position instead of leaving it at its original spot, which
+  // would make the size-cap eviction below treat a just-used key as the oldest.
+  cache.delete(key);
   if (cache.size >= MAX_ENTRIES) {
     // Map preserves insertion order: the first key is the oldest entry.
     const oldest = cache.keys().next().value;

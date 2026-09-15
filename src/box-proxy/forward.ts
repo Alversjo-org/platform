@@ -60,7 +60,12 @@ export function forwardUpgrade(req: IncomingMessage, socket: Duplex, head: Buffe
   const upstream = http.request({ host: target.host, port: target.port, method: req.method, path: req.url, headers: forwardedRequestHeaders(req, target, { stripHopByHop: false }) });
   upstream.on('upgrade', (r, upSocket, upHead) => {
     const lines = [`HTTP/1.1 ${r.statusCode} ${r.statusMessage}`];
-    for (let i = 0; i < r.rawHeaders.length; i += 2) lines.push(`${r.rawHeaders[i]}: ${r.rawHeaders[i + 1]}`);
+    for (let i = 0; i < r.rawHeaders.length; i += 2) {
+      // Browsers honour Set-Cookie on a WebSocket handshake response too — a box
+      // must never be able to plant/overwrite the platform's session cookie this way.
+      if (r.rawHeaders[i].toLowerCase() === 'set-cookie') continue;
+      lines.push(`${r.rawHeaders[i]}: ${r.rawHeaders[i + 1]}`);
+    }
     socket.write(lines.join('\r\n') + '\r\n\r\n');
     if (upHead.length) socket.write(upHead);
     if (head.length) upSocket.write(head);

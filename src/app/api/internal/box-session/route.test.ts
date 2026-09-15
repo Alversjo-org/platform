@@ -44,17 +44,22 @@ describe('POST /api/internal/box-session', () => {
   it('ok with a token for an admin on an existing box', async () => {
     const cookie = await cookieFor('admin@example.org');
     const [u] = await db.select().from(schema.user);
-    await db.insert(schema.boxes).values({ id: 'abc', name: 'b', profile: 'admin', jwtSecret: 's', ownerUserId: u.id, flyMachineId: 'm1', status: 'started' });
-    const body = await (await call({ host: 'abc.boxes.localhost', cookie })).json();
-    expect(body).toMatchObject({ status: 'ok', boxId: 'abc', machineId: 'm1', canStart: true });
+    await db.insert(schema.boxes).values({ id: 'abc123abc123', name: 'b', profile: 'admin', jwtSecret: 's', ownerUserId: u.id, flyMachineId: 'm1', status: 'started' });
+    const body = await (await call({ host: 'abc123abc123.boxes.localhost', cookie })).json();
+    expect(body).toMatchObject({ status: 'ok', boxId: 'abc123abc123', machineId: 'm1', canStart: true });
     expect(typeof body.token).toBe('string');
   });
 
   it('forbidden for a member without access, not_found for unknown box', async () => {
     const cookie = await cookieFor('member@example.org');
     const [u] = await db.select().from(schema.user);
-    await db.insert(schema.boxes).values({ id: 'abc', name: 'b', profile: 'admin', jwtSecret: 's', ownerUserId: u.id, flyMachineId: 'm1' });
-    expect(await (await call({ host: 'abc.boxes.localhost', cookie })).json()).toEqual({ status: 'forbidden' });
+    await db.insert(schema.boxes).values({ id: 'abc123abc123', name: 'b', profile: 'admin', jwtSecret: 's', ownerUserId: u.id, flyMachineId: 'm1' });
+    expect(await (await call({ host: 'abc123abc123.boxes.localhost', cookie })).json()).toEqual({ status: 'forbidden' });
     expect(await (await call({ host: 'zzz.boxes.localhost', cookie })).json()).toEqual({ status: 'not_found' });
+  });
+
+  it('not_found for a box id that is not exactly 12 lowercase hex characters', async () => {
+    const cookie = await cookieFor('member2@example.org');
+    expect(await (await call({ host: 'zz.boxes.localhost', cookie })).json()).toEqual({ status: 'not_found' });
   });
 });
