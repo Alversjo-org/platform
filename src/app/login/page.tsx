@@ -68,7 +68,7 @@ export default function LoginPage() {
                 <Input id="otp" inputMode="numeric" pattern="\d{6}" maxLength={6} required autoFocus value={otp} onChange={(e) => setOtp(e.target.value)} />
               </div>
               <Button type="submit" className="w-full" disabled={busy}>Sign in</Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={() => setStep('email')}>Use another email</Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={() => { setError(null); setStep('email'); }}>Use another email</Button>
             </form>
           )}
         </CardContent>
