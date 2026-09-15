@@ -28,13 +28,30 @@ async function getBox(db: Db, id: string): Promise<Box> {
 export async function createBox(deps: BoxDeps, input: { name: string; profile: BoxProfile; ownerUserId: string; protected?: boolean }): Promise<Box> {
   const id = (deps.newId ?? newBoxId)();
   const jwtSecret = (deps.newSecret ?? newJwtSecret)();
-  await deps.db.insert(schema.boxes).values({ id, name: input.name, profile: input.profile, jwtSecret, ownerUserId: input.ownerUserId, protected: input.protected ?? false, status: 'creating' });
+  // The row is born unprotected and only becomes protected once the machine exists:
+  // a create that dies halfway leaves a box that can still be destroyed from the UI,
+  // never an undeletable row pointing at nothing.
+  await deps.db.insert(schema.boxes).values({ id, name: input.name, profile: input.profile, jwtSecret, ownerUserId: input.ownerUserId, protected: false, status: 'creating' });
   await deps.db.insert(schema.boxAccess).values({ boxId: id, userId: input.ownerUserId, grantedByUserId: input.ownerUserId });
 
-  const volume = await deps.fly.createVolume(`box_${id}`, 10);
-  await deps.db.update(schema.boxes).set({ flyVolumeId: volume.id }).where(eq(schema.boxes.id, id));
-  const machine = await deps.fly.createMachine({ name: `box-${id}`, image: deps.image, env: boxEnv(input.profile, deps.secrets, jwtSecret), volumeId: volume.id, memoryMb: 2048, cpus: 1 });
-  await deps.db.update(schema.boxes).set({ flyMachineId: machine.id, status: machine.state }).where(eq(schema.boxes.id, id));
+  let volumeId: string | undefined;
+  try {
+    const volume = await deps.fly.createVolume(`box_${id}`, 10);
+    volumeId = volume.id;
+    await deps.db.update(schema.boxes).set({ flyVolumeId: volume.id }).where(eq(schema.boxes.id, id));
+    const machine = await deps.fly.createMachine({ name: `box-${id}`, image: deps.image, env: boxEnv(input.profile, deps.secrets, jwtSecret), volumeId: volume.id, memoryMb: 2048, cpus: 1 });
+    await deps.db.update(schema.boxes).set({ flyMachineId: machine.id, status: machine.state, protected: input.protected ?? false }).where(eq(schema.boxes.id, id));
+  } catch (err) {
+    // Undo everything this call created, so a failed attempt leaves nothing to clean
+    // up by hand and the same name can simply be tried again.
+    try {
+      await deps.db.delete(schema.boxes).where(eq(schema.boxes.id, id)); // box_access cascades
+      if (volumeId) await deps.fly.deleteVolume(volumeId);
+    } catch (cleanupErr) {
+      console.error(`createBox: cleanup after a failed create of ${id} failed`, cleanupErr);
+    }
+    throw err;
+  }
   return getBox(deps.db, id);
 }
 
@@ -50,6 +67,7 @@ export async function stopBox(deps: BoxDeps, id: string): Promise<void> {
   const box = await getBox(deps.db, id);
   if (!box.flyMachineId) throw new BoxNotFoundError(id);
   await deps.fly.stopMachine(box.flyMachineId);
+  await deps.fly.waitForState(box.flyMachineId, 'stopped', 60); // mirrors startBox: status reflects reality, not intent
   await deps.db.update(schema.boxes).set({ status: 'stopped' }).where(eq(schema.boxes.id, id));
 }
 
@@ -70,5 +88,9 @@ export async function shareBox(deps: BoxDeps, input: { boxId: string; email: str
 }
 
 export async function revokeBox(deps: BoxDeps, input: { boxId: string; userId: string }): Promise<void> {
+  const box = await getBox(deps.db, input.boxId);
+  // Revoking the owner would leave a box nobody but an admin can reach, and the row
+  // still names them as owner. The UI hides the button; this is the actual rule.
+  if (box.ownerUserId === input.userId) throw new Error('The owner always has access');
   await deps.db.delete(schema.boxAccess).where(and(eq(schema.boxAccess.boxId, input.boxId), eq(schema.boxAccess.userId, input.userId)));
 }

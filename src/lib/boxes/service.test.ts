@@ -70,7 +70,22 @@ describe('box service', () => {
 
   it('protected boxes cannot be destroyed', async () => {
     const box = await createBox(deps, { name: 'admin box', profile: 'admin', ownerUserId: 'admin', protected: true });
+    expect(box.protected).toBe(true); // set only once the machine exists, but set
     await expect(destroyBox(deps, box.id)).rejects.toBeInstanceOf(ProtectedBoxError);
     expect(await db.select().from(schema.boxes)).toHaveLength(1);
+  });
+
+  it('a create that fails halfway leaves no rows and no volume behind', async () => {
+    const failing: BoxDeps = { ...deps, fly: { ...deps.fly, async createMachine() { throw new Error('fly is down'); } } };
+    await expect(createBox(failing, { name: 'T', profile: 'admin', ownerUserId: 'admin', protected: true })).rejects.toThrow('fly is down');
+    expect(await db.select().from(schema.boxes)).toHaveLength(0);
+    expect(await db.select().from(schema.boxAccess)).toHaveLength(0);
+    expect(calls).toEqual(['createVolume box_abc123abc123', 'deleteVolume vol_box_abc123abc123']);
+  });
+
+  it('the owner can never be revoked', async () => {
+    const box = await createBox(deps, { name: 'T', profile: 'contributor', ownerUserId: 'admin' });
+    await expect(revokeBox(deps, { boxId: box.id, userId: 'admin' })).rejects.toThrow('The owner always has access');
+    expect(await canAccessBox(db, { id: 'admin', role: 'admin' }, box.id)).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBoxHost } from './host';
+import { isBoxesSubdomain, parseBoxHost } from './host';
 
 const boxesDomain = 'boxes.alversjo.land';
 
@@ -16,5 +16,20 @@ describe('parseBoxHost', () => {
     ['platform host', 'alversjo.land', null],
   ] as const)('%s', (_name, input, expected) => {
     expect(parseBoxHost(input, boxesDomain)).toEqual(expected);
+  });
+});
+
+describe('isBoxesSubdomain', () => {
+  it.each([
+    ['valid box host', 'abc123abc123.boxes.alversjo.land', true],
+    ['junk box host', 'nope.boxes.alversjo.land', true],
+    ['multi-label under the domain', 'a.b.boxes.alversjo.land', true],
+    ['with port and trailing dot', 'NOPE.boxes.alversjo.land.:3000', true],
+    ['the boxes domain itself', 'boxes.alversjo.land', false],
+    ['suffix confusion', 'abc123abc123.boxes.alversjo.land.attacker.com', false],
+    ['platform host', 'members.alversjo.land', false],
+    ['undefined', undefined, false],
+  ] as const)('%s', (_name, input, expected) => {
+    expect(isBoxesSubdomain(input, boxesDomain)).toBe(expected);
   });
 });

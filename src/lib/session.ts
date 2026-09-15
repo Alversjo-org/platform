@@ -21,6 +21,8 @@ export async function requireUser(): Promise<SessionUser> {
 
 export async function requireAdmin(): Promise<SessionUser> {
   const u = await requireUser();
-  if (u.role !== 'admin') throw new Error('Admins only');
+  // A member who reaches an admin page is not an error to report, just someone in the
+  // wrong place: send them back to their own box list.
+  if (u.role !== 'admin') redirect('/boxes');
   return u;
 }

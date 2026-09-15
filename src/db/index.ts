@@ -15,8 +15,17 @@ const migrationsFolder = path.join(process.cwd(), 'drizzle');
 
 /** Opens a database for the given URL and applies pending migrations. */
 export async function createDb(url: string | undefined = process.env.DATABASE_URL): Promise<Db> {
+  // PGlite is a dev-box convenience: silently falling back to a local file in
+  // production would mean a fresh, empty database on every machine.
+  if (process.env.NODE_ENV === 'production' && !url?.startsWith('postgres')) {
+    throw new Error('DATABASE_URL must be a postgres:// URL in production');
+  }
   if (url && url.startsWith('postgres')) {
-    const db = drizzlePg({ client: new Pool({ connectionString: url }), schema });
+    const pool = new Pool({ connectionString: url });
+    // An idle client can fail on its own (server restart, network drop). Without a
+    // listener node-postgres re-emits that as an uncaught exception on the process.
+    pool.on('error', (e) => console.error('pg pool error', e));
+    const db = drizzlePg({ client: pool, schema });
     await migratePg(db, { migrationsFolder });
     return db as unknown as Db;
   }
@@ -30,6 +39,11 @@ export async function createDb(url: string | undefined = process.env.DATABASE_UR
 let dbPromise: Promise<Db> | undefined;
 /** Process-wide database, opened on first use. */
 export function getDb(): Promise<Db> {
-  dbPromise ??= createDb();
+  // A rejected promise must not stay memoised: the next caller would get the old
+  // failure forever, even once the database is reachable again.
+  dbPromise ??= createDb().catch((e) => {
+    dbPromise = undefined;
+    throw e;
+  });
   return dbPromise;
 }
