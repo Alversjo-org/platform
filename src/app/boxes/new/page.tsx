@@ -1,4 +1,5 @@
 import { AppShell } from '@/components/app-shell';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,16 @@ import { createBoxAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function NewBoxPage() {
+export default async function NewBoxPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const user = await requireAdmin();
+  const { error } = await searchParams;
   return (
     <AppShell user={user}>
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>New box</CardTitle>

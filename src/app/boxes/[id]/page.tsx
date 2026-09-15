@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { getDb, schema } from '@/db';
 import { AppShell } from '@/components/app-shell';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +16,15 @@ import { destroyBoxAction, revokeBoxAction, shareBoxAction, startBoxAction, stop
 
 export const dynamic = 'force-dynamic';
 
-export default async function BoxPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BoxPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
   const { id } = await params;
+  const { error } = await searchParams;
   const user = await requireUser();
   const db = await getDb();
   if (!(await canAccessBox(db, user, id))) notFound();
@@ -30,6 +38,11 @@ export default async function BoxPage({ params }: { params: Promise<{ id: string
 
   return (
     <AppShell user={user}>
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{box.name} {box.protected && <Badge variant="secondary">protected</Badge>}</h1>
         <Button render={<a href={boxOpenUrl(box.id)} />}>Open</Button>
