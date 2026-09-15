@@ -99,4 +99,12 @@ app.prepare().then(() => {
   });
 
   server.listen(port, () => console.log(`platform on http://localhost:${port}, boxes on *.${boxesDomain}`));
+
+  const shutdown = (signal: string) => {
+    console.log(`${signal} received, shutting down`);
+    server.close(); // stop accepting new connections; existing relays continue
+    setTimeout(() => process.exit(0), 10_000).unref(); // hard stop if graceful close hangs
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 });
