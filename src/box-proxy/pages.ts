@@ -11,3 +11,5 @@ export const stoppedPageHtml = (canStart: boolean, platformUrl: string, boxId: s
 export const notFoundPageHtml = () => shell('Unknown box', '<p>There is no box at this address.</p>');
 
 export const notReadyPageHtml = () => shell('Box is starting', '<p>The box is starting up and has not finished its first boot yet. Try again in a minute.</p>');
+
+export const unavailablePageHtml = () => shell('Temporarily unavailable', '<p>The platform could not check your access right now. Try again in a moment.</p>');

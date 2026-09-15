@@ -9,7 +9,12 @@ let target: { host: string; port: number };
 
 beforeAll(async () => {
   upstream = http.createServer((req, res) => {
-    res.writeHead(200, { 'content-type': 'text/plain', 'x-seen-path': req.url ?? '' });
+    res.writeHead(200, {
+      'content-type': 'text/plain',
+      'x-seen-path': req.url ?? '',
+      'x-seen-cookie': req.headers.cookie ?? '',
+      'set-cookie': 'upstream-planted=should-not-leak-to-client',
+    });
     req.pipe(res); // echo body
   });
   upstream.on('upgrade', (req, socket) => {
@@ -42,6 +47,16 @@ describe('forwardHttp', () => {
     const res = await fetch(`http://127.0.0.1:${(dead.address() as AddressInfo).port}/`);
     expect(res.status).toBe(503);
     dead.close();
+  });
+
+  it('never forwards the client Cookie header to the target', async () => {
+    const res = await fetch(`http://127.0.0.1:${proxyPort()}/`, { headers: { cookie: 'better-auth.session_token=super-secret' } });
+    expect(res.headers.get('x-seen-cookie')).toBe('');
+  });
+
+  it('never relays Set-Cookie from the target back to the client', async () => {
+    const res = await fetch(`http://127.0.0.1:${proxyPort()}/`);
+    expect(res.headers.getSetCookie()).toEqual([]);
   });
 });
 
