@@ -73,14 +73,14 @@ export default async function BoxPage({
             {isAdmin && (
               <div className="flex gap-2">
                 {(state === 'stopped' || state === 'suspended' || state === 'created') && (
-                  <form action={startBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="outline">Start</Button></form>
+                  <form action={startBoxAction}><input type="hidden" name="id" value={box.id} /><Button type="submit" size="sm" variant="outline">Start</Button></form>
                 )}
                 {state === 'started' && (
-                  <form action={stopBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="outline">Stop</Button></form>
+                  <form action={stopBoxAction}><input type="hidden" name="id" value={box.id} /><Button type="submit" size="sm" variant="outline">Stop</Button></form>
                 )}
                 {state === 'starting' && <Button size="sm" variant="outline" disabled>Starting…</Button>}
                 {state === 'stopping' && <Button size="sm" variant="outline" disabled>Stopping…</Button>}
-                <form action={destroyBoxAction}><input type="hidden" name="id" value={box.id} /><Button size="sm" variant="destructive">Destroy</Button></form>
+                <form action={destroyBoxAction}><input type="hidden" name="id" value={box.id} /><Button type="submit" size="sm" variant="destructive">Destroy</Button></form>
               </div>
             )}
           </CardContent>
@@ -96,7 +96,7 @@ export default async function BoxPage({
                     <TableCell>{m.email}</TableCell>
                     <TableCell className="text-right">
                       {isAdmin && m.userId !== box.ownerUserId && (
-                        <form action={revokeBoxAction}><input type="hidden" name="id" value={box.id} /><input type="hidden" name="userId" value={m.userId} /><Button size="sm" variant="ghost">Revoke</Button></form>
+                        <form action={revokeBoxAction}><input type="hidden" name="id" value={box.id} /><input type="hidden" name="userId" value={m.userId} /><Button type="submit" size="sm" variant="ghost">Revoke</Button></form>
                       )}
                     </TableCell>
                   </TableRow>
@@ -110,7 +110,7 @@ export default async function BoxPage({
                   <Label htmlFor="email">Share with (must have logged in once)</Label>
                   <Input id="email" name="email" type="email" required />
                 </div>
-                <Button size="sm">Share</Button>
+                <Button type="submit" size="sm">Share</Button>
               </form>
             )}
           </CardContent>
