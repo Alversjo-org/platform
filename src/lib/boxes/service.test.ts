@@ -6,18 +6,19 @@ import { createBox, destroyBox, revokeBox, shareBox, startBox, stopBox, UserNotF
 
 function fakeFly() {
   const calls: string[] = [];
+  const machineEnvs: Record<string, string>[] = [];
   const machines = new Map<string, FlyMachine>();
   const fly: FlyOps = {
     async createVolume(name) { calls.push(`createVolume ${name}`); return { id: `vol_${name}` }; },
     async deleteVolume(id) { calls.push(`deleteVolume ${id}`); },
-    async createMachine(input) { calls.push(`createMachine ${input.name} ${input.env.BOX_PROFILE} ${input.volumeId}`); const m = { id: `m_${input.name}`, name: input.name, state: 'started' as const, region: 'arn' }; machines.set(m.id, m); return m; },
+    async createMachine(input) { calls.push(`createMachine ${input.name} ${input.env.BOX_PROFILE} ${input.volumeId}`); machineEnvs.push(input.env); const m = { id: `m_${input.name}`, name: input.name, state: 'started' as const, region: 'arn' }; machines.set(m.id, m); return m; },
     async getMachine(id) { return machines.get(id)!; },
     async startMachine(id) { calls.push(`start ${id}`); machines.get(id)!.state = 'started'; },
     async stopMachine(id) { calls.push(`stop ${id}`); machines.get(id)!.state = 'stopped'; },
     async destroyMachine(id) { calls.push(`destroy ${id}`); machines.delete(id); },
     async waitForState() {},
   };
-  return { fly, calls };
+  return { fly, calls, machineEnvs };
 }
 
 const secrets = { claudeToken: 'c', ghTokenAdmin: 'ga', ghTokenContributor: 'gc', flyToken: 'f', resendKey: 'r', cloudflareToken: 'cf' };
@@ -26,6 +27,7 @@ describe('box service', () => {
   let db: Db;
   let deps: BoxDeps;
   let calls: string[];
+  let machineEnvs: Record<string, string>[];
 
   beforeEach(async () => {
     db = await createDb('pglite://memory');
@@ -35,6 +37,7 @@ describe('box service', () => {
     ]);
     const f = fakeFly();
     calls = f.calls;
+    machineEnvs = f.machineEnvs;
     deps = { db, fly: f.fly, secrets, image: 'img:latest', newId: () => 'abc123abc123', newSecret: () => 'jwt-secret' };
   });
 
@@ -42,6 +45,7 @@ describe('box service', () => {
     const box = await createBox(deps, { name: 'Test', profile: 'contributor', ownerUserId: 'admin' });
     expect(box).toMatchObject({ id: 'abc123abc123', flyVolumeId: 'vol_box_abc123abc123', flyMachineId: 'm_box-abc123abc123', status: 'started', jwtSecret: 'jwt-secret' });
     expect(calls).toEqual(['createVolume box_abc123abc123', 'createMachine box-abc123abc123 contributor vol_box_abc123abc123']);
+    expect(machineEnvs[0]).toMatchObject({ OWNER_EMAIL: 'admin@example.org' });
     expect(await canAccessBox(db, { id: 'admin', role: 'admin' }, box.id)).toBe(true);
     expect(await canAccessBox(db, { id: 'viktor', role: 'member' }, box.id)).toBe(false);
   });

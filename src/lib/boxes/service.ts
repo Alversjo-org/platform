@@ -32,10 +32,11 @@ export async function createBox(deps: BoxDeps, input: { name: string; profile: B
 
   let volumeId: string | undefined;
   try {
+    const [owner] = await deps.db.select({ email: schema.user.email }).from(schema.user).where(eq(schema.user.id, input.ownerUserId));
     const volume = await deps.fly.createVolume(`box_${id}`, 10);
     volumeId = volume.id;
     await deps.db.update(schema.boxes).set({ flyVolumeId: volume.id }).where(eq(schema.boxes.id, id));
-    const machine = await deps.fly.createMachine({ name: `box-${id}`, image: deps.image, env: boxEnv(input.profile, deps.secrets, jwtSecret), volumeId: volume.id, memoryMb: 2048, cpus: 1 });
+    const machine = await deps.fly.createMachine({ name: `box-${id}`, image: deps.image, env: boxEnv(input.profile, deps.secrets, jwtSecret, owner.email), volumeId: volume.id, memoryMb: 2048, cpus: 1 });
     await deps.db.update(schema.boxes).set({ flyMachineId: machine.id, status: machine.state }).where(eq(schema.boxes.id, id));
   } catch (err) {
     // Undo everything this call created, so a failed attempt leaves nothing to clean
