@@ -12,6 +12,9 @@ export const user = pgTable('user', {
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
   role: text('role', { enum: ['member', 'admin'] }).$type<Role>().notNull().default('member'),
+  phoneNumber: text('phone_number'),
+  isActiveMember: boolean('is_active_member').notNull().default(false),
+  membershipExpiresAt: timestamp('membership_expires_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
