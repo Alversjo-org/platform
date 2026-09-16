@@ -1,4 +1,4 @@
-import { boolean, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
 
 export type Role = 'member' | 'admin';
 export type BoxProfile = 'admin' | 'contributor';
@@ -15,6 +15,8 @@ export const user = pgTable('user', {
   phoneNumber: text('phone_number'),
   isActiveMember: boolean('is_active_member').notNull().default(false),
   membershipExpiresAt: timestamp('membership_expires_at'),
+  phoneVisible: boolean('phone_visible').notNull().default(false),
+  emailVisible: boolean('email_visible').notNull().default(false),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -79,5 +81,22 @@ export const boxAccess = pgTable(
   (t) => [primaryKey({ columns: [t.boxId, t.userId] })],
 );
 
+export const externalPayments = pgTable(
+  'external_payments',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    source: text('source').notNull(), // 'stripe' or a free-text label chosen at CSV import time
+    externalId: text('external_id').notNull(), // Stripe charge id, or a deterministic hash of the CSV row
+    email: text('email').notNull(), // raw value matched against user.email at import/sync time
+    amountCents: integer('amount_cents'),
+    currency: text('currency'),
+    paidAt: timestamp('paid_at').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [unique().on(t.source, t.externalId)],
+);
+
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
+export type ExternalPayment = typeof externalPayments.$inferSelect;
