@@ -59,12 +59,15 @@ migration never reaches `main`.
 
 All of these live in `fly secrets` on `alversjo-platform`, never in the repo
 (spec §4.7): `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`,
-`FLY_API_TOKEN`, `ADMIN_EMAILS`, `CLOUDFLARE_API_TOKEN`, and the tokens
-injected into boxes at creation — `BOX_CLAUDE_TOKEN`, `BOX_GH_TOKEN_ADMIN`,
-`BOX_GH_TOKEN_CONTRIBUTOR`. CI additionally holds a `FLY_API_TOKEN` as a
-GitHub Actions secret, for the deploy job. Non-secret configuration
-(`PLATFORM_URL`, `BOXES_DOMAIN`, `COOKIE_DOMAIN`, `FLY_BOXES_APP`,
-`BOX_IMAGE`, `EMAIL_FROM`) is in `fly.toml`'s `[env]`.
+`FLY_API_TOKEN`, `ADMIN_EMAILS`, `CLOUDFLARE_API_TOKEN`, `STRIPE_API_KEY`,
+`STRIPE_WEBHOOK_SECRET`, and the tokens injected into boxes at creation —
+`BOX_CLAUDE_TOKEN`, `BOX_GH_TOKEN_ADMIN`, `BOX_GH_TOKEN_CONTRIBUTOR`. CI
+additionally holds a `FLY_API_TOKEN` as a GitHub Actions secret, for the
+deploy job. Non-secret configuration (`PLATFORM_URL`, `BOXES_DOMAIN`,
+`COOKIE_DOMAIN`, `FLY_BOXES_APP`, `BOX_IMAGE`, `EMAIL_FROM`) is in
+`fly.toml`'s `[env]`, alongside `STRIPE_PRICE_YEARLY`, `STRIPE_PRICE_MONTHLY`
+and `STRIPE_PRICE_ONE_TIME`, which are the one membership's three price IDs
+and not secret either.
 
 ## The box model
 
