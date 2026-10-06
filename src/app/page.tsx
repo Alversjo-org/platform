@@ -4,11 +4,9 @@ import { AppShell } from '@/components/app-shell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { isActiveNow, needsPayment } from '@/lib/members/status';
 import { requireUser } from '@/lib/session';
-import { startCheckoutAction, updateProfileAction } from './actions';
+import { startCheckoutAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +22,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       {checkout === 'cancelled' && <Alert className="mb-4"><AlertDescription>Checkout was cancelled.</AlertDescription></Alert>}
       {checkout === 'success' && <Alert className="mb-4"><AlertDescription>Payment received — your membership will update shortly.</AlertDescription></Alert>}
-      <Card className="mb-4 max-w-md">
+      <Card className="max-w-md">
         <CardHeader><CardTitle>Membership</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <p>
@@ -48,20 +46,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
           )}
         </CardContent>
       </Card>
-      {active && (
-        <Card className="max-w-md">
-          <CardHeader><CardTitle>Your profile</CardTitle></CardHeader>
-          <CardContent>
-            <form action={updateProfileAction} className="space-y-4">
-              <div className="space-y-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" defaultValue={member.name} /></div>
-              <div className="space-y-2"><Label htmlFor="nickname">Nickname</Label><Input id="nickname" name="nickname" defaultValue={member.nickname ?? ''} /></div>
-              <div className="space-y-2"><Label htmlFor="phoneNumber">Phone number</Label><Input id="phoneNumber" name="phoneNumber" type="tel" placeholder="+46701234567" defaultValue={member.phoneNumber ?? ''} /></div>
-              <div className="space-y-2"><Label htmlFor="discordHandle">Discord handle</Label><Input id="discordHandle" name="discordHandle" defaultValue={member.discordHandle ?? ''} /></div>
-              <Button type="submit">Save</Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
     </AppShell>
   );
 }
