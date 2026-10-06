@@ -34,7 +34,7 @@ export default function LoginPage() {
     const { error } = await authClient.signIn.emailOtp({ email, otp });
     setBusy(false);
     if (error) return setError(error.message ?? 'Wrong or expired code');
-    router.push('/boxes');
+    router.push('/');
     router.refresh();
   }
 

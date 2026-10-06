@@ -1,6 +1,6 @@
 import { boolean, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 
-export type Role = 'member' | 'admin';
+export type Role = 'member' | 'member-admin' | 'admin';
 export type BoxProfile = 'admin' | 'contributor';
 
 // BetterAuth core tables. Field names (TS keys) must match BetterAuth's model
@@ -8,13 +8,19 @@ export type BoxProfile = 'admin' | 'contributor';
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull().default(''),
+  nickname: text('nickname'),
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
-  role: text('role', { enum: ['member', 'admin'] }).$type<Role>().notNull().default('member'),
+  role: text('role', { enum: ['member', 'member-admin', 'admin'] }).$type<Role>().notNull().default('member'),
   phoneNumber: text('phone_number'),
+  discordHandle: text('discord_handle'),
   isActiveMember: boolean('is_active_member').notNull().default(false),
   membershipExpiresAt: timestamp('membership_expires_at'),
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  lastContactedAt: timestamp('last_contacted_at'),
+  contactNotes: text('contact_notes'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -79,5 +85,14 @@ export const boxAccess = pgTable(
   (t) => [primaryKey({ columns: [t.boxId, t.userId] })],
 );
 
+export const renewalMessageSetting = pgTable('renewal_message_setting', {
+  id: text('id').primaryKey().default('default'),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedByUserId: text('updated_by_user_id').references(() => user.id),
+});
+
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
+export type RenewalMessageSetting = typeof renewalMessageSetting.$inferSelect;

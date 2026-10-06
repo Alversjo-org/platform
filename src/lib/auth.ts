@@ -22,7 +22,7 @@ export function buildAuth(db: Db, opts: { sendOtp?: (mail: OtpMail) => Promise<v
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     user: {
       additionalFields: {
-        role: { type: ['member', 'admin'], required: false, defaultValue: 'member', input: false },
+        role: { type: ['member', 'member-admin', 'admin'], required: false, defaultValue: 'member', input: false },
       },
       changeEmail: { enabled: true },
     },
