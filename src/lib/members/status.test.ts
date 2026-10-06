@@ -23,7 +23,7 @@ describe('needsPayment', () => {
     expect(needsPayment({ isActiveMember: true, membershipExpiresAt: past, stripeSubscriptionId: 'sub_1' })).toBe(true);
   });
 
-  it('is true for an active member with no recurring subscription (manual grant or one-time payment)', () => {
+  it('is true for an active member with no recurring subscription (e.g. a manually granted or cash membership)', () => {
     expect(needsPayment({ isActiveMember: true, membershipExpiresAt: future, stripeSubscriptionId: null })).toBe(true);
   });
 

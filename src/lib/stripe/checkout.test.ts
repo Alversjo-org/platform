@@ -5,7 +5,7 @@ describe('createCheckoutSession', () => {
   function fakeStripe(opts: { returnUrl?: string | null; prices?: Record<string, string> } = {}) {
     const {
       returnUrl = 'https://checkout.stripe.com/session123',
-      prices = { [LOOKUP_KEYS.yearly]: 'price_yearly', [LOOKUP_KEYS.monthly]: 'price_monthly', [LOOKUP_KEYS.one_time]: 'price_one_time' },
+      prices = { [LOOKUP_KEYS.yearly]: 'price_yearly', [LOOKUP_KEYS.monthly]: 'price_monthly' },
     } = opts;
     const calls: { sessions: unknown[]; priceLookups: string[][] } = { sessions: [], priceLookups: [] };
     const stripe: CheckoutClient = {
@@ -33,14 +33,6 @@ describe('createCheckoutSession', () => {
       line_items: [{ price: 'price_yearly', quantity: 1 }],
       success_url: 'https://members.alversjo.land/?checkout=success',
     });
-  });
-
-  it('creates a payment-mode session for the one-time plan', async () => {
-    const { stripe, calls } = fakeStripe();
-    await createCheckoutSession(stripe, {
-      plan: 'one_time', user: { id: 'u1', email: 'a@example.org', stripeCustomerId: null }, platformUrl: 'https://x',
-    });
-    expect(calls.sessions[0]).toMatchObject({ mode: 'payment', line_items: [{ price: 'price_one_time', quantity: 1 }] });
   });
 
   it('uses the existing Stripe customer id instead of customer_email when present', async () => {

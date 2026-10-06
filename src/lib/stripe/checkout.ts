@@ -1,12 +1,11 @@
 import type Stripe from 'stripe';
 
-export type MembershipPlan = 'yearly' | 'monthly' | 'one_time';
+export type MembershipPlan = 'yearly' | 'monthly';
 
 /** Set as the "Lookup key" on the matching Price in the Stripe Dashboard (Products → price → Lookup key). */
 export const LOOKUP_KEYS: Record<MembershipPlan, string> = {
   yearly: 'membership_yearly',
   monthly: 'membership_monthly',
-  one_time: 'membership_one_time',
 };
 
 /** The minimal slice of the Stripe client createCheckoutSession needs — a real Stripe instance satisfies this structurally. */
@@ -37,7 +36,7 @@ export async function createCheckoutSession(
   const platformUrl = input.platformUrl.replace(/\/$/, '');
   const price = await priceFor(stripe, input.plan);
   const session = await stripe.checkout.sessions.create({
-    mode: input.plan === 'one_time' ? 'payment' : 'subscription',
+    mode: 'subscription',
     customer: input.user.stripeCustomerId ?? undefined,
     customer_email: input.user.stripeCustomerId ? undefined : input.user.email,
     client_reference_id: input.user.id,

@@ -70,12 +70,12 @@ deploy job. Non-secret configuration (`PLATFORM_URL`, `BOXES_DOMAIN`,
 
 ### Stripe
 
-The one membership is sold three ways — yearly recurring (default), monthly
-recurring, one-time yearly — as three Prices on one Product in the Stripe
-dashboard. The app finds each Price by its **lookup_key**, not a stored
-Price ID, so prices can be created, repriced or rotated in Stripe without a
-deploy: set each Price's lookup_key to `membership_yearly`, `membership_monthly`
-or `membership_one_time` respectively (Products → the Price → Lookup key).
+The one membership is sold two ways — yearly recurring (default) or monthly
+recurring — as two Prices on one Product in the Stripe dashboard. The app
+finds each Price by its **lookup_key**, not a stored Price ID, so prices can
+be created, repriced or rotated in Stripe without a deploy: set each Price's
+lookup_key to `membership_yearly` or `membership_monthly` respectively
+(Products → the Price → Lookup key).
 
 Stripe delivers membership lifecycle events to `POST /api/webhooks/stripe`.
 In the Stripe Dashboard's webhook configuration, that endpoint must be
