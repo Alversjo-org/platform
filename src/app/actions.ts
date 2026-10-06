@@ -28,7 +28,7 @@ export async function updateProfileAction(formData: FormData) {
   redirect('/');
 }
 
-const VALID_PLANS: readonly MembershipPlan[] = ['yearly', 'monthly', 'one_time'];
+const VALID_PLANS: readonly MembershipPlan[] = ['yearly', 'monthly'];
 
 function isMembershipPlan(value: string): value is MembershipPlan {
   return (VALID_PLANS as readonly string[]).includes(value);

@@ -50,20 +50,12 @@ describe('handleStripeEvent', () => {
     expect(u.membershipExpiresAt).toBeNull();
   });
 
-  it('extends membershipExpiresAt by one year from now on a one-time payment', async () => {
-    await handleStripeEvent(db, event('checkout.session.completed', { mode: 'payment', client_reference_id: 'u1', customer: 'cus_1' }), fakeStripe());
+  it('ignores a checkout session with an unexpected (non-subscription) mode without throwing or writing', async () => {
+    await expect(
+      handleStripeEvent(db, event('checkout.session.completed', { mode: 'payment', client_reference_id: 'u1', customer: 'cus_1' }), fakeStripe()),
+    ).resolves.toBeUndefined();
     const [u] = await db.select().from(schema.user).where(eq(schema.user.id, 'u1'));
-    expect(u.isActiveMember).toBe(true);
-    expect(u.membershipExpiresAt!.getUTCFullYear()).toBe(new Date().getUTCFullYear() + 1);
-  });
-
-  it('extends membershipExpiresAt from the current expiry, not from now, when renewing early', async () => {
-    const future = new Date(); future.setUTCMonth(future.getUTCMonth() + 6);
-    await db.update(schema.user).set({ membershipExpiresAt: future, isActiveMember: true }).where(eq(schema.user.id, 'u1'));
-    await handleStripeEvent(db, event('checkout.session.completed', { mode: 'payment', client_reference_id: 'u1', customer: 'cus_1' }), fakeStripe());
-    const [u] = await db.select().from(schema.user).where(eq(schema.user.id, 'u1'));
-    expect(u.membershipExpiresAt!.getUTCFullYear()).toBe(future.getUTCFullYear() + 1);
-    expect(u.membershipExpiresAt!.getUTCMonth()).toBe(future.getUTCMonth());
+    expect(u).toMatchObject({ isActiveMember: false, stripeCustomerId: null });
   });
 
   it('syncs membershipExpiresAt on subscription.updated when the subscription is active', async () => {
@@ -103,7 +95,7 @@ describe('handleStripeEvent', () => {
 
   it('does not throw for a checkout session whose client_reference_id matches no user', async () => {
     await expect(
-      handleStripeEvent(db, event('checkout.session.completed', { mode: 'payment', client_reference_id: 'nobody', customer: 'cus_x' }), fakeStripe()),
+      handleStripeEvent(db, event('checkout.session.completed', { mode: 'subscription', client_reference_id: 'nobody', customer: 'cus_x' }), fakeStripe()),
     ).resolves.toBeUndefined();
   });
 

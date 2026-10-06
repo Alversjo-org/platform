@@ -44,10 +44,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
                 <input type="hidden" name="plan" value="monthly" />
                 <Button type="submit" variant="outline">Pay monthly</Button>
               </form>
-              <form action={startCheckoutAction}>
-                <input type="hidden" name="plan" value="one_time" />
-                <Button type="submit" variant="outline">Pay one year (one-time)</Button>
-              </form>
             </div>
           )}
         </CardContent>

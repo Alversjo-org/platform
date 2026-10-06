@@ -8,12 +8,6 @@ export interface SubscriptionRetriever {
   subscriptions: { retrieve(id: string): Promise<Stripe.Subscription> };
 }
 
-function addYears(date: Date, years: number): Date {
-  const d = new Date(date);
-  d.setUTCFullYear(d.getUTCFullYear() + years);
-  return d;
-}
-
 // Stripe moved current_period_end from the subscription itself to each subscription item.
 function periodEndOf(subscription: Stripe.Subscription): Date | undefined {
   const periodEndSec = subscription.items.data[0]?.current_period_end;
@@ -38,38 +32,36 @@ async function findByStripeCustomerId(db: Db, customerId: string | null): Promis
 }
 
 async function handleCheckoutCompleted(db: Db, session: Stripe.Checkout.Session, stripe: SubscriptionRetriever): Promise<void> {
+  // The membership is subscription-only (no one-time plan); a session in any other mode
+  // did not come from this app's own checkout flow.
+  if (session.mode !== 'subscription') {
+    console.error(`Stripe webhook: checkout session ${session.id} has unexpected mode ${session.mode}, ignoring`);
+    return;
+  }
   const user = await findByClientReferenceId(db, session.client_reference_id);
   if (!user) { console.error(`Stripe webhook: no user for client_reference_id ${session.client_reference_id}`); return; }
   const customerId = customerIdOf(session.customer) ?? user.stripeCustomerId;
 
-  if (session.mode === 'subscription') {
-    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id ?? null;
-    // Retrieve the subscription now rather than waiting for a follow-up customer.subscription.*
-    // event: Stripe doesn't guarantee one will arrive (or arrive after this one), and that event
-    // is resolved by stripeCustomerId, which only this handler writes — so out-of-order delivery
-    // could otherwise leave membershipExpiresAt permanently unset.
-    let membershipExpiresAt: Date | undefined;
-    if (subscriptionId) {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      membershipExpiresAt = periodEndOf(subscription);
-      if (membershipExpiresAt === undefined) {
-        console.error(`Stripe webhook: subscription ${subscriptionId} has no current_period_end`);
-      }
+  const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id ?? null;
+  // Retrieve the subscription now rather than waiting for a follow-up customer.subscription.*
+  // event: Stripe doesn't guarantee one will arrive (or arrive after this one), and that event
+  // is resolved by stripeCustomerId, which only this handler writes — so out-of-order delivery
+  // could otherwise leave membershipExpiresAt permanently unset.
+  let membershipExpiresAt: Date | undefined;
+  if (subscriptionId) {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    membershipExpiresAt = periodEndOf(subscription);
+    if (membershipExpiresAt === undefined) {
+      console.error(`Stripe webhook: subscription ${subscriptionId} has no current_period_end`);
     }
-    await db.update(schema.user)
-      .set({
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-        isActiveMember: true,
-        ...(membershipExpiresAt !== undefined ? { membershipExpiresAt } : {}),
-      })
-      .where(eq(schema.user.id, user.id));
-    return;
   }
-
-  const base = user.membershipExpiresAt && user.membershipExpiresAt > new Date() ? user.membershipExpiresAt : new Date();
   await db.update(schema.user)
-    .set({ stripeCustomerId: customerId, isActiveMember: true, membershipExpiresAt: addYears(base, 1) })
+    .set({
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      isActiveMember: true,
+      ...(membershipExpiresAt !== undefined ? { membershipExpiresAt } : {}),
+    })
     .where(eq(schema.user.id, user.id));
 }
 
