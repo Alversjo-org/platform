@@ -3,7 +3,7 @@
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { getDb, schema } from '@/db';
-import { InvalidPhoneError, MembershipExpiredError, UserNotFoundError, updateOwnProfile } from '@/lib/members/service';
+import { InvalidPhoneError, UserNotFoundError, updateOwnProfile } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
 import { createCheckoutSession, type MembershipPlan } from '@/lib/stripe/checkout';
 import { getStripe } from '@/lib/stripe/client';
@@ -20,7 +20,7 @@ export async function updateProfileAction(formData: FormData) {
       discordHandle: String(formData.get('discordHandle') ?? '').trim() || null,
     });
   } catch (e) {
-    if (e instanceof InvalidPhoneError || e instanceof MembershipExpiredError) {
+    if (e instanceof InvalidPhoneError) {
       redirect(`/?error=${encodeURIComponent(e.message)}`);
     }
     throw e;

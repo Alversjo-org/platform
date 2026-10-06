@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import {
-  InvalidPhoneError, listMembers, MembershipExpiredError, touchLastContacted, updateMember, updateOwnProfile, UserNotFoundError,
+  clearAvatar, InvalidPhoneError, listMembers, touchLastContacted, updateMember, updateOwnProfile, UserNotFoundError,
 } from './service';
 
 describe('member service', () => {
@@ -79,11 +79,40 @@ describe('member service', () => {
     expect(updated).toMatchObject({ name: 'Vik', nickname: 'V', phoneNumber: '+46701234567', discordHandle: 'vik#1' });
   });
 
-  it('updateOwnProfile refuses to edit a profile that is not currently active, even if someone posts the form directly', async () => {
+  it('updateOwnProfile succeeds even for a member who is not currently active', async () => {
     // viktor is never made active in this test: isActiveMember defaults to false.
-    await expect(
-      updateOwnProfile(db, { id: 'viktor', name: 'Vik', nickname: null, phoneNumber: null, discordHandle: null }),
-    ).rejects.toBeInstanceOf(MembershipExpiredError);
+    const updated = await updateOwnProfile(db, { id: 'viktor', name: 'Vik', nickname: null, phoneNumber: null, discordHandle: null });
+    expect(updated.name).toBe('Vik');
+  });
+
+  it('updateOwnProfile sets the image when provided', async () => {
+    const updated = await updateOwnProfile(db, {
+      id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: null, discordHandle: null, image: 'data:image/webp;base64,AAAA',
+    });
+    expect(updated.image).toBe('data:image/webp;base64,AAAA');
+  });
+
+  it('updateOwnProfile leaves the image unchanged when not provided', async () => {
+    await updateOwnProfile(db, {
+      id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: null, discordHandle: null, image: 'data:image/webp;base64,AAAA',
+    });
+    const updated = await updateOwnProfile(db, { id: 'viktor', name: 'Viktor Andersson', nickname: null, phoneNumber: null, discordHandle: null });
+    expect(updated.image).toBe('data:image/webp;base64,AAAA');
+  });
+
+  it('clearAvatar sets the image back to null', async () => {
+    await updateOwnProfile(db, {
+      id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: null, discordHandle: null, image: 'data:image/webp;base64,AAAA',
+    });
+    await clearAvatar(db, 'viktor');
+    const [row] = await db.select().from(schema.user).where(eq(schema.user.id, 'viktor'));
+    expect(row.image).toBeNull();
+  });
+
+  it('clearAvatar on a member with no image is a harmless no-op', async () => {
+    await expect(clearAvatar(db, 'viktor')).resolves.toBeUndefined();
+    const [row] = await db.select().from(schema.user).where(eq(schema.user.id, 'viktor'));
+    expect(row.image).toBeNull();
   });
 
   it('touchLastContacted stamps the current time', async () => {
