@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Default is well under what a real avatar photo needs; the profile page's own
+  // 5MB check only ever runs on uploads this limit lets through in the first place.
+  experimental: {
+    serverActions: { bodySizeLimit: '5mb' },
+  },
 };
 
 export default nextConfig;

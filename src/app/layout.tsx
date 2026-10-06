@@ -12,9 +12,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const description =
+  "Alversjö is a place for co-creation and exploration, in close collaboration with nature and wildlife.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Alversjö",
-  description: "Alversjö platform",
+  description,
+  openGraph: {
+    title: "Alversjö",
+    description,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Alversjö",
+    description,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

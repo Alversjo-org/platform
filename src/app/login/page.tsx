@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -42,7 +43,10 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-6">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in to Alversjö</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Image src="/alversjo-logo.png" alt="" width={28} height={28} />
+            Sign in to Alversjö
+          </CardTitle>
           <CardDescription>
             {step === 'email' ? 'We will email you a six-digit code.' : `Enter the code sent to ${email}.`}
           </CardDescription>
