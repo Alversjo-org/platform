@@ -5,8 +5,9 @@ The browser-based control plane for Alversjö's cloud development machines
 Anyone can log in with an email address and a six-digit code; admins can
 create, start, stop, destroy and share boxes; anyone with access can open a
 box's CloudCLI session in the browser, through the platform, without a second
-login. Memberships, Stripe and everything else are explicitly out of scope for
-v0 — see [`docs/superpowers/specs/2026-09-15-platform-v0-design.md`](docs/superpowers/specs/2026-09-15-platform-v0-design.md)
+login. Membership management and Stripe payments (checkout, subscription
+renewal and lapse) are also implemented — see
+[`docs/superpowers/specs/2026-09-15-platform-v0-design.md`](docs/superpowers/specs/2026-09-15-platform-v0-design.md)
 for the full design.
 
 Next.js 16 (App Router) behind a custom Node server (`server.ts`) so WebSocket
@@ -68,6 +69,14 @@ deploy job. Non-secret configuration (`PLATFORM_URL`, `BOXES_DOMAIN`,
 `fly.toml`'s `[env]`, alongside `STRIPE_PRICE_YEARLY`, `STRIPE_PRICE_MONTHLY`
 and `STRIPE_PRICE_ONE_TIME`, which are the one membership's three price IDs
 and not secret either.
+
+### Stripe webhook
+
+Stripe delivers membership lifecycle events to `POST /api/webhooks/stripe`.
+In the Stripe Dashboard's webhook configuration, that endpoint must be
+subscribed to `checkout.session.completed`, `customer.subscription.updated`
+and `customer.subscription.deleted` — all three are required for membership
+status to stay correct in production.
 
 ## The box model
 

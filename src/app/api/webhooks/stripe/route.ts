@@ -15,6 +15,6 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(`invalid signature: ${(err as Error).message}`, { status: 400 });
   }
 
-  await handleStripeEvent(await getDb(), event);
+  await handleStripeEvent(await getDb(), event, getStripe());
   return Response.json({ received: true });
 }

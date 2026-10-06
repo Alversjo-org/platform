@@ -15,6 +15,11 @@ kill_timeout = "30s"
   COOKIE_DOMAIN = "alversjo.land"
   FLY_BOXES_APP = "alversjo-boxes"
   BOX_IMAGE = "registry.fly.io/alversjo-boxes:latest"
+  # Real Stripe Price IDs, not secret but not yet known to this box — whoever has access to the
+  # Stripe dashboard must fill these in before checkout/payments will work.
+  STRIPE_PRICE_YEARLY = ""
+  STRIPE_PRICE_MONTHLY = ""
+  STRIPE_PRICE_ONE_TIME = ""
   EMAIL_FROM = "Alversjö <no-reply@notifications.alversjo.land>"
 
 [http_service]

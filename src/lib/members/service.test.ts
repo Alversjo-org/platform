@@ -29,6 +29,23 @@ describe('member service', () => {
     expect(updated.membershipExpiresAt).toEqual(expiresAt);
   });
 
+  it('updateMember clears optional fields back to null', async () => {
+    const expiresAt = new Date('2027-01-01T00:00:00Z');
+    await updateMember(db, {
+      id: 'viktor', name: 'Viktor Andersson', nickname: 'Vik', phoneNumber: '+46701234567', discordHandle: 'vik#1234',
+      isActiveMember: true, membershipExpiresAt: expiresAt, contactNotes: 'Paid at the door',
+    });
+    const cleared = await updateMember(db, {
+      id: 'viktor', name: 'Viktor Andersson', nickname: null, phoneNumber: null, discordHandle: null,
+      isActiveMember: true, membershipExpiresAt: null, contactNotes: null,
+    });
+    expect(cleared.nickname).toBeNull();
+    expect(cleared.phoneNumber).toBeNull();
+    expect(cleared.discordHandle).toBeNull();
+    expect(cleared.contactNotes).toBeNull();
+    expect(cleared.membershipExpiresAt).toBeNull();
+  });
+
   it('updateMember rejects a phone number that is not E.164', async () => {
     await expect(
       updateMember(db, {

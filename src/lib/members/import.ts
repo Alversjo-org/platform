@@ -39,14 +39,20 @@ export async function importMembers(db: Db, csvText: string): Promise<ImportRowR
         continue;
       }
     }
-    await db.insert(schema.user).values({
-      id: randomUUID(),
-      email,
-      name: name ?? '',
-      membershipExpiresAt,
-      isActiveMember: membershipExpiresAt !== null && membershipExpiresAt > new Date(),
-    });
-    results.push({ email: lowerEmail, status: 'created' });
+    try {
+      await db.insert(schema.user).values({
+        id: randomUUID(),
+        email,
+        name: name ?? '',
+        membershipExpiresAt,
+        isActiveMember: membershipExpiresAt !== null && membershipExpiresAt > new Date(),
+      });
+      results.push({ email: lowerEmail, status: 'created' });
+    } catch (e) {
+      // An unexpected DB-level failure (anything beyond the two already-validated cases above)
+      // shouldn't abort the whole import and lose the rest of the batch's results.
+      results.push({ email: lowerEmail, status: 'error', message: (e as Error).message });
+    }
   }
   return results;
 }

@@ -8,10 +8,15 @@ import { importMembersAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function ImportMembersPage({ searchParams }: { searchParams: Promise<{ results?: string }> }) {
+export default async function ImportMembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; skipped?: string; error?: string; errorEmail?: string | string[] }>;
+}) {
   const admin = await requireMemberAdmin();
-  const { results } = await searchParams;
-  const parsed = results ? (JSON.parse(results) as { email: string; status: string; message?: string }[]) : null;
+  const { created, skipped, error, errorEmail } = await searchParams;
+  const hasSummary = created !== undefined || skipped !== undefined || error !== undefined;
+  const errorEmails = errorEmail === undefined ? [] : Array.isArray(errorEmail) ? errorEmail : [errorEmail];
 
   return (
     <AppShell user={admin}>
@@ -28,15 +33,20 @@ export default async function ImportMembersPage({ searchParams }: { searchParams
           </form>
         </CardContent>
       </Card>
-      {parsed && (
+      {hasSummary && (
         <Card className="mt-4 max-w-lg">
           <CardHeader><CardTitle>Results</CardTitle></CardHeader>
           <CardContent>
-            <ul className="space-y-1 text-sm">
-              {parsed.map((r, i) => (
-                <li key={i}>{r.email} — {r.status}{r.message ? `: ${r.message}` : ''}</li>
-              ))}
-            </ul>
+            <p className="text-sm">
+              {created ?? 0} created, {skipped ?? 0} skipped, {error ?? 0} errored.
+            </p>
+            {errorEmails.length > 0 && (
+              <ul className="mt-2 space-y-1 text-sm">
+                {errorEmails.map((email, i) => (
+                  <li key={i}>{email} — error</li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       )}

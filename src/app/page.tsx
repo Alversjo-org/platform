@@ -23,6 +23,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
     <AppShell user={sessionUser}>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       {checkout === 'cancelled' && <Alert className="mb-4"><AlertDescription>Checkout was cancelled.</AlertDescription></Alert>}
+      {checkout === 'success' && <Alert className="mb-4"><AlertDescription>Payment received — your membership will update shortly.</AlertDescription></Alert>}
       <Card className="mb-4 max-w-md">
         <CardHeader><CardTitle>Membership</CardTitle></CardHeader>
         <CardContent className="space-y-4">
