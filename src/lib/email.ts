@@ -16,3 +16,17 @@ export async function sendOtpEmail({ to, otp, type }: OtpMail): Promise<void> {
   const { error } = await new Resend(key).emails.send({ from, to: [to], subject, text });
   if (error) throw new Error(`Resend: ${error.message}`);
 }
+
+export type RenewalMail = { to: string; subject: string; body: string };
+
+/** Sends a renewal-ask email. Without RESEND_API_KEY the message is printed instead (dev boxes). */
+export async function sendRenewalEmail({ to, subject, body }: RenewalMail): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.log(`[email] to=${to} subject="${subject}"`);
+    return;
+  }
+  const from = process.env.EMAIL_FROM ?? 'Alversjö <no-reply@notifications.alversjo.land>';
+  const { error } = await new Resend(key).emails.send({ from, to: [to], subject, text: body });
+  if (error) throw new Error(`Resend: ${error.message}`);
+}
