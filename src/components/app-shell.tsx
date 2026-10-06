@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import Image from 'next/image';
 import Link from 'next/link';
 import { getDb, schema } from '@/db';
 import { Avatar } from '@/components/ui/avatar';
@@ -23,7 +24,10 @@ export async function AppShell({ user, children }: { user: SessionUser; children
     <div className="mx-auto max-w-5xl p-6">
       <header className="space-y-2">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-lg font-semibold">Alversjö</Link>
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
+            <Image src="/alversjo-logo.png" alt="" width={32} height={32} />
+            Alversjö
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
               <Avatar image={image} name={name} email={user.email} />
