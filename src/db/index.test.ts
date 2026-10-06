@@ -8,6 +8,18 @@ describe('createDb', () => {
     const rows = await db.select().from(schema.user);
     expect(rows).toHaveLength(1);
     expect(rows[0].role).toBe('member');
+    expect(rows[0]).toMatchObject({
+      nickname: null, discordHandle: null, stripeCustomerId: null, stripeSubscriptionId: null,
+      lastContactedAt: null, contactNotes: null,
+    });
+  });
+
+  it('accepts a renewal message setting row', async () => {
+    const db = await createDb('pglite://memory');
+    await db.insert(schema.user).values({ id: 'admin1', email: 'admin@example.org', role: 'admin' });
+    await db.insert(schema.renewalMessageSetting).values({ id: 'default', subject: 'Renew', body: 'Hi {name}', updatedByUserId: 'admin1' });
+    const [row] = await db.select().from(schema.renewalMessageSetting);
+    expect(row).toMatchObject({ subject: 'Renew', body: 'Hi {name}' });
   });
 
   it('enforces the box_access primary key', async () => {
