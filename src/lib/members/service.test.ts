@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import {
@@ -70,7 +71,7 @@ describe('member service', () => {
 
   it('touchLastContacted stamps the current time', async () => {
     await touchLastContacted(db, 'viktor');
-    const [row] = await listMembers(db);
+    const [row] = await db.select().from(schema.user).where(eq(schema.user.id, 'viktor'));
     expect(row.lastContactedAt).toBeInstanceOf(Date);
   });
 });
