@@ -7,7 +7,7 @@ import { resizeAvatar } from '@/lib/members/avatar';
 import { clearAvatar, InvalidPhoneError, UserNotFoundError, updateOwnProfile } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
 
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
 export async function updateProfileAction(formData: FormData) {
   const user = await requireUser();
