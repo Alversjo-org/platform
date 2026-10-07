@@ -22,10 +22,12 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Default is well under what a real avatar photo needs; the profile page's own
-  // 5MB check only ever runs on uploads this limit lets through in the first place.
+  // Must stay above the profile action's own MAX_AVATAR_BYTES (5MB) — the multipart
+  // request also carries the other form fields and boundaries, and if this limit is
+  // ever at or below that constant, the framework rejects the upload first and the
+  // action's own friendlier "too large" error never gets a chance to fire.
   experimental: {
-    serverActions: { bodySizeLimit: '5mb' },
+    serverActions: { bodySizeLimit: '8mb' },
   },
 };
 

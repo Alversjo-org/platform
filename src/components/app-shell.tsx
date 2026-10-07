@@ -25,7 +25,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
         <div className="flex items-center justify-between">
           <Link href="/" className="text-lg font-semibold">Alversjö</Link>
           <DropdownMenu>
-            <DropdownMenuTrigger className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <DropdownMenuTrigger aria-label="Account menu" className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
               <Avatar image={image} name={name} email={user.email} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
