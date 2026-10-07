@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import nextConfig from '../../../next.config';
-import { MAX_AVATAR_BYTES } from './actions';
+import { MAX_AVATAR_BYTES } from './constants';
 
 /** Parses Next's SizeLimit format ("8mb", "512kb", or a plain byte count) into bytes. */
 function sizeLimitToBytes(limit: number | string): number {

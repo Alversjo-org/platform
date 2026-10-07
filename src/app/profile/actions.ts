@@ -6,8 +6,7 @@ import { getDb, schema } from '@/db';
 import { resizeAvatar } from '@/lib/members/avatar';
 import { clearAvatar, InvalidPhoneError, UserNotFoundError, updateOwnProfile } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
-
-export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+import { MAX_AVATAR_BYTES } from './constants';
 
 export async function updateProfileAction(formData: FormData) {
   const user = await requireUser();
