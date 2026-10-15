@@ -22,4 +22,38 @@ describe('resizeAvatar', () => {
   it('throws for input that is not a decodable image', async () => {
     await expect(resizeAvatar(Buffer.from('not an image'))).rejects.toThrow();
   });
+
+  it('corrects orientation for a photo with EXIF rotation, as mobile cameras produce', async () => {
+    // Build a 64x64 "as the photographer saw it" image: red top half, blue bottom half.
+    const red = Buffer.alloc(64 * 32 * 3);
+    for (let i = 0; i < 64 * 32; i++) red.set([255, 0, 0], i * 3);
+    const blue = Buffer.alloc(64 * 32 * 3);
+    for (let i = 0; i < 64 * 32; i++) blue.set([0, 0, 255], i * 3);
+    const upright = await sharp(Buffer.concat([red, blue]), {
+      raw: { width: 64, height: 64, channels: 3 },
+    })
+      .jpeg()
+      .toBuffer();
+
+    // Simulate what a phone sensor stores for a photo taken rotated 90°: the raw
+    // pixels are physically rotated, and an EXIF orientation tag records the
+    // correction needed to display it upright.
+    const sensorData = await sharp(upright).rotate(270).toBuffer();
+    const input = await sharp(sensorData).withMetadata({ orientation: 6 }).jpeg().toBuffer();
+
+    const result = await resizeAvatar(input);
+    const bytes = Buffer.from(result.slice('data:image/webp;base64,'.length), 'base64');
+    const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+
+    const pixelAt = (x: number, y: number) => {
+      const idx = (y * info.width + x) * info.channels;
+      return [data[idx], data[idx + 1], data[idx + 2]];
+    };
+
+    // Correct orientation varies by row (top red, bottom blue) and is constant across columns.
+    expect(pixelAt(32, 16)).toEqual(pixelAt(96, 16)); // both in the top half
+    expect(pixelAt(32, 112)).toEqual(pixelAt(96, 112)); // both in the bottom half
+    expect(pixelAt(64, 16)[0]).toBeGreaterThan(pixelAt(64, 16)[2]); // top is red-dominant
+    expect(pixelAt(64, 112)[2]).toBeGreaterThan(pixelAt(64, 112)[0]); // bottom is blue-dominant
+  });
 });
