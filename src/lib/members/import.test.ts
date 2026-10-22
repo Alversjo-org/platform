@@ -44,4 +44,59 @@ describe('importMembers', () => {
     expect(results[0]).toMatchObject({ status: 'created' });
     expect(results[1]).toMatchObject({ status: 'error' });
   });
+
+  it('creates a new member with lastContactedAt and contactNotes from the CSV', async () => {
+    const results = await importMembers(
+      db,
+      'name,email,membershipExpiresAt,lastContactedAt,contactNotes\nViktor,viktor@example.org,,2026-01-01,Asked about renewing',
+    );
+    expect(results).toEqual([{ email: 'viktor@example.org', status: 'created' }]);
+    const [viktor] = await db.select().from(schema.user).where(eq(schema.user.email, 'viktor@example.org'));
+    expect(viktor).toMatchObject({
+      lastContactedAt: new Date('2026-01-01'),
+      contactNotes: 'Asked about renewing',
+    });
+  });
+
+  it('reports an invalid lastContactedAt date as an error', async () => {
+    const results = await importMembers(
+      db,
+      'name,email,membershipExpiresAt,lastContactedAt,contactNotes\nBad,bad@example.org,,not-a-date,',
+    );
+    expect(results[0]).toMatchObject({ status: 'error', message: 'Invalid date: not-a-date' });
+  });
+
+  it('parses a quoted contactNotes field containing a comma', async () => {
+    const results = await importMembers(
+      db,
+      'name,email,membershipExpiresAt,lastContactedAt,contactNotes\nViktor,viktor@example.org,,,"Called Jan 3, left voicemail"',
+    );
+    expect(results).toEqual([{ email: 'viktor@example.org', status: 'created' }]);
+    const [viktor] = await db.select().from(schema.user).where(eq(schema.user.email, 'viktor@example.org'));
+    expect(viktor.contactNotes).toBe('Called Jan 3, left voicemail');
+  });
+
+  it('parses an escaped double-quote inside a quoted contactNotes field', async () => {
+    const results = await importMembers(
+      db,
+      'name,email,membershipExpiresAt,lastContactedAt,contactNotes\nViktor,viktor@example.org,,,"Said ""call back later"""',
+    );
+    expect(results).toEqual([{ email: 'viktor@example.org', status: 'created' }]);
+    const [viktor] = await db.select().from(schema.user).where(eq(schema.user.email, 'viktor@example.org'));
+    expect(viktor.contactNotes).toBe('Said "call back later"');
+  });
+
+  it('updates lastContactedAt and contactNotes on a skipped row matching an existing member', async () => {
+    const results = await importMembers(
+      db,
+      'name,email,membershipExpiresAt,lastContactedAt,contactNotes\nNew Name,Existing@Example.org,,2026-02-01,Reached out again',
+    );
+    expect(results).toEqual([{ email: 'existing@example.org', status: 'skipped', message: 'Already a member' }]);
+    const [row] = await db.select().from(schema.user).where(eq(schema.user.email, 'existing@example.org'));
+    expect(row).toMatchObject({
+      name: 'Existing',
+      lastContactedAt: new Date('2026-02-01'),
+      contactNotes: 'Reached out again',
+    });
+  });
 });
