@@ -49,6 +49,7 @@ export default async function MemberPage({
               <div className="space-y-2"><Label htmlFor="phoneNumber">Phone number</Label><Input id="phoneNumber" name="phoneNumber" type="tel" placeholder="+46701234567" defaultValue={member.phoneNumber ?? ''} /></div>
               <div className="space-y-2"><Label htmlFor="discordHandle">Discord handle</Label><Input id="discordHandle" name="discordHandle" defaultValue={member.discordHandle ?? ''} /></div>
               <div className="flex items-center gap-2"><Checkbox id="isActiveMember" name="isActiveMember" defaultChecked={member.isActiveMember} /><Label htmlFor="isActiveMember">Active member</Label></div>
+              <div className="flex items-center gap-2"><Checkbox id="canCreateEvents" name="canCreateEvents" defaultChecked={member.canCreateEvents} /><Label htmlFor="canCreateEvents">Can create events</Label></div>
               <div className="space-y-2">
                 <Label htmlFor="membershipExpiresAt">Membership expires</Label>
                 <Input id="membershipExpiresAt" name="membershipExpiresAt" type="date" defaultValue={member.membershipExpiresAt ? member.membershipExpiresAt.toISOString().slice(0, 10) : ''} />
