@@ -90,6 +90,8 @@ export default async function EventDetailPage({
 
       <p className="mb-4 text-sm text-muted-foreground">{going.length} going, {waitlisted.length} on the waitlist</p>
 
+      <a href={`/events/${slug}/ics`} className="mb-4 inline-block text-sm underline">Add to calendar</a>
+
       {isOrganiser && (
         <div className="mb-4 flex flex-wrap gap-4 text-sm">
           <Link href={`/events/${slug}/edit`} className="underline">Edit</Link>

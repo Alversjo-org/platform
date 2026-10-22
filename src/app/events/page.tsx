@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getDb, schema } from '@/db';
+import { getOrCreateIcalToken } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -10,6 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function EventsPage() {
   const user = await requireUser();
   const db = await getDb();
+  const icalToken = await getOrCreateIcalToken(db, user.id);
   const rows = await db.select({ project: schema.project, details: schema.eventDetails })
     .from(schema.project)
     .innerJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
@@ -39,7 +41,10 @@ export default async function EventsPage() {
     <AppShell user={user}>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Events</h1>
-        <Link href="/events/new" className="text-sm underline">New event</Link>
+        <div className="flex gap-4">
+          <a href={`/events/members.ics?token=${icalToken}`} className="text-sm underline">Subscribe to all events</a>
+          <Link href="/events/new" className="text-sm underline">New event</Link>
+        </div>
       </div>
       <h2 className="mb-2 text-lg font-medium">Upcoming</h2>
       <EventTable items={upcoming} />

@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import {
-  clearAvatar, InvalidPhoneError, listMembers, setCanCreateEvents, touchLastContacted, updateMember, updateOwnProfile, UserNotFoundError,
+  clearAvatar, getOrCreateIcalToken, getUserByIcalToken, InvalidPhoneError, listMembers, setCanCreateEvents, touchLastContacted,
+  updateMember, updateOwnProfile, UserNotFoundError,
 } from './service';
 
 describe('member service', () => {
@@ -124,5 +125,17 @@ describe('member service', () => {
   it('setCanCreateEvents flips the flag', async () => {
     const updated = await setCanCreateEvents(db, { id: 'viktor', canCreateEvents: false });
     expect(updated.canCreateEvents).toBe(false);
+  });
+
+  it('getOrCreateIcalToken generates one on first call and is stable after', async () => {
+    const first = await getOrCreateIcalToken(db, 'viktor');
+    const second = await getOrCreateIcalToken(db, 'viktor');
+    expect(first).toBe(second);
+  });
+
+  it('getUserByIcalToken finds the right user, or null for an unknown token', async () => {
+    const token = await getOrCreateIcalToken(db, 'viktor');
+    expect((await getUserByIcalToken(db, token))?.id).toBe('viktor');
+    expect(await getUserByIcalToken(db, 'not-a-real-token')).toBeNull();
   });
 });

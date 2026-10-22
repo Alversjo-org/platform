@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { User } from '@/db/schema';
@@ -68,4 +69,18 @@ export async function setCanCreateEvents(db: Db, input: { id: string; canCreateE
   const [row] = await db.update(schema.user).set({ canCreateEvents: input.canCreateEvents }).where(eq(schema.user.id, input.id)).returning();
   if (!row) throw new UserNotFoundError(input.id);
   return row;
+}
+
+export async function getOrCreateIcalToken(db: Db, userId: string): Promise<string> {
+  const [row] = await db.select().from(schema.user).where(eq(schema.user.id, userId));
+  if (!row) throw new UserNotFoundError(userId);
+  if (row.icalToken) return row.icalToken;
+  const token = randomUUID();
+  await db.update(schema.user).set({ icalToken: token }).where(eq(schema.user.id, userId));
+  return token;
+}
+
+export async function getUserByIcalToken(db: Db, token: string): Promise<User | null> {
+  const [row] = await db.select().from(schema.user).where(eq(schema.user.icalToken, token));
+  return row ?? null;
 }
