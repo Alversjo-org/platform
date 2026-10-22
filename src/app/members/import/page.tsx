@@ -22,12 +22,19 @@ export default async function ImportMembersPage({
     <AppShell user={admin}>
       <h1 className="mb-4 text-xl font-semibold">Import members</h1>
       <Card className="max-w-lg">
-        <CardHeader><CardTitle>Paste CSV (name,email,membershipExpiresAt)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Paste CSV (name,email,membershipExpiresAt,lastContactedAt,contactNotes)</CardTitle></CardHeader>
         <CardContent>
           <form action={importMembersAction} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="csv">CSV</Label>
-              <Textarea id="csv" name="csv" rows={10} placeholder={'name,email,membershipExpiresAt\nViktor,viktor@example.org,2027-01-01'} />
+              <Textarea
+                id="csv"
+                name="csv"
+                rows={10}
+                placeholder={
+                  'name,email,membershipExpiresAt,lastContactedAt,contactNotes\nViktor,viktor@example.org,2027-01-01,,\nLapsed,lapsed@example.org,2024-01-01,2026-01-01,"Asked about renewing"'
+                }
+              />
             </div>
             <Button type="submit">Import</Button>
           </form>
