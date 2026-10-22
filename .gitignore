@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 .pglite/
 .env
+
+# superpowers scratch workspace (ledgers, task briefs, review packages)
+.superpowers/
