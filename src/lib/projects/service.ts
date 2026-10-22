@@ -63,6 +63,25 @@ export async function updateProjectMeta(db: Db, input: { projectId: string; titl
   return row;
 }
 
+export async function duplicateEvent(db: Db, input: { sourceProjectId: string; actorUserId: string }): Promise<Project> {
+  const [owner] = await db.select().from(schema.user).where(eq(schema.user.id, input.actorUserId));
+  if (!owner?.canCreateEvents) throw new EventCreationBlockedError(input.actorUserId);
+  const source = await getProject(db, input.sourceProjectId);
+  const members = await db.select().from(schema.projectMember).where(eq(schema.projectMember.projectId, input.sourceProjectId));
+  const slug = await uniqueSlug(db, slugify(source.title));
+  return db.transaction(async (tx) => {
+    const id = randomUUID();
+    const [row] = await tx.insert(schema.project).values({
+      id, slug, title: source.title, summary: source.summary, body: source.body,
+      kind: 'event', status: 'draft', visibility: 'members', ownerUserId: input.actorUserId,
+    }).returning();
+    if (members.length > 0) {
+      await tx.insert(schema.projectMember).values(members.map((m) => ({ projectId: id, userId: m.userId, role: m.role })));
+    }
+    return row;
+  });
+}
+
 export const ALLOWED_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
   draft: ['published', 'archived'],
   published: ['cancelled', 'closed'],
