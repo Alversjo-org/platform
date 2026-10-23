@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { getDb, schema } from '@/db';
 import { listSignups } from '@/lib/events/signup-service';
