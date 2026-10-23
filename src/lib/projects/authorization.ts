@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
+import type { ProjectStatus } from '@/db/schema';
 import { isMemberAdmin, type SessionUser } from '@/lib/session';
 
 export class NotAuthorizedError extends Error {
@@ -22,4 +23,9 @@ export async function assertEventPermission(
   const role = await getEventRole(db, projectId, user);
   const allowed = role === 'override' || role === 'lead' || (role === 'cocreator' && permission === 'editDetails');
   if (!allowed) throw new NotAuthorizedError(permission);
+}
+
+/** A published event is visible to anyone; any other status only to an organiser (or member-admin/admin). */
+export function canViewEvent(status: ProjectStatus, role: 'lead' | 'cocreator' | 'override' | null): boolean {
+  return status === 'published' || role !== null;
 }

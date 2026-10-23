@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { SessionUser } from '@/lib/session';
-import { assertEventPermission, getEventRole, NotAuthorizedError } from './authorization';
+import { assertEventPermission, canViewEvent, getEventRole, NotAuthorizedError } from './authorization';
 
 describe('event authorization', () => {
   let db: Db;
@@ -42,5 +42,21 @@ describe('event authorization', () => {
 
   it('a stranger can do neither', async () => {
     await expect(assertEventPermission(db, 'p1', stranger, 'editDetails')).rejects.toBeInstanceOf(NotAuthorizedError);
+  });
+});
+
+describe('canViewEvent', () => {
+  it('a published event is visible to anyone, organiser or not', () => {
+    expect(canViewEvent('published', null)).toBe(true);
+    expect(canViewEvent('published', 'lead')).toBe(true);
+  });
+
+  it('a draft, cancelled, closed, or archived event is visible only to an organiser or override', () => {
+    for (const status of ['draft', 'cancelled', 'closed', 'archived'] as const) {
+      expect(canViewEvent(status, null)).toBe(false);
+      expect(canViewEvent(status, 'lead')).toBe(true);
+      expect(canViewEvent(status, 'cocreator')).toBe(true);
+      expect(canViewEvent(status, 'override')).toBe(true);
+    }
   });
 });

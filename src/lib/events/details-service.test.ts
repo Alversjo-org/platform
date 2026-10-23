@@ -32,4 +32,13 @@ describe('upsertEventDetails', () => {
   it('rejects hasCapacityLimit=false with a non-null capacity', async () => {
     await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: false, capacity: 10 })).rejects.toBeInstanceOf(InvalidCapacityError);
   });
+
+  it('rejects hasCapacityLimit=true with capacity=0 (an empty form field, not a real zero-seat event)', async () => {
+    await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: 0 })).rejects.toBeInstanceOf(InvalidCapacityError);
+  });
+
+  it('rejects hasCapacityLimit=true with a negative or non-finite capacity', async () => {
+    await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: -1 })).rejects.toBeInstanceOf(InvalidCapacityError);
+    await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: NaN })).rejects.toBeInstanceOf(InvalidCapacityError);
+  });
 });

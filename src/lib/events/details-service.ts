@@ -22,6 +22,7 @@ export type UpsertEventDetailsInput = {
 
 export async function upsertEventDetails(db: Db, input: UpsertEventDetailsInput): Promise<EventDetails> {
   if ((input.capacity === null) !== !input.hasCapacityLimit) throw new InvalidCapacityError();
+  if (input.hasCapacityLimit && !(Number.isFinite(input.capacity) && input.capacity! >= 1)) throw new InvalidCapacityError();
   const [row] = await db.insert(schema.eventDetails)
     .values(input)
     .onConflictDoUpdate({ target: schema.eventDetails.projectId, set: input })

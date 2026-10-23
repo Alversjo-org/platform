@@ -30,6 +30,7 @@ export function listEventAreas(db: Db, eventProjectId: string): Promise<EventAre
   return db.select().from(schema.eventArea).where(eq(schema.eventArea.eventProjectId, eventProjectId));
 }
 
-export async function removeEventArea(db: Db, eventAreaId: string): Promise<void> {
-  await db.delete(schema.eventArea).where(eq(schema.eventArea.id, eventAreaId));
+export async function removeEventArea(db: Db, input: { eventAreaId: string; eventProjectId: string }): Promise<void> {
+  await db.delete(schema.eventArea)
+    .where(and(eq(schema.eventArea.id, input.eventAreaId), eq(schema.eventArea.eventProjectId, input.eventProjectId)));
 }

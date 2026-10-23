@@ -18,5 +18,5 @@ export async function GET(req: Request) {
   const ics = buildFeedIcs(rows.map(({ project, details }) => ({
     uid: project.id, title: project.title, startsAt: details.startsAt, endsAt: details.endsAt, description: project.summary,
   })));
-  return new Response(ics, { headers: { 'Content-Type': 'text/calendar' } });
+  return new Response(ics, { headers: { 'Content-Type': 'text/calendar; charset=utf-8' } });
 }

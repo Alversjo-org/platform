@@ -8,6 +8,7 @@ import { bookEventArea, removeEventArea } from '@/lib/areas/booking-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
 import { getProjectBySlug, updateProjectMeta } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
+import { stockholmWallClockToUtc } from '@/lib/timezone';
 
 async function loadEditableProject(slug: string) {
   const user = await requireUser();
@@ -48,12 +49,12 @@ export async function updateEventDetailsAction(formData: FormData) {
   try {
     await upsertEventDetails(db, {
       projectId: project.id,
-      startsAt: new Date(String(formData.get('startsAt'))),
-      endsAt: new Date(String(formData.get('endsAt'))),
+      startsAt: stockholmWallClockToUtc(String(formData.get('startsAt'))),
+      endsAt: stockholmWallClockToUtc(String(formData.get('endsAt'))),
       hasCapacityLimit,
       capacity,
-      signupOpensAt: signupOpensRaw === '' ? null : new Date(signupOpensRaw),
-      signupClosesAt: signupClosesRaw === '' ? null : new Date(signupClosesRaw),
+      signupOpensAt: signupOpensRaw === '' ? null : stockholmWallClockToUtc(signupOpensRaw),
+      signupClosesAt: signupClosesRaw === '' ? null : stockholmWallClockToUtc(signupClosesRaw),
       priceSek: Number(formData.get('priceSek') ?? 0) || 0,
       priceNote: priceNoteRaw === '' ? null : priceNoteRaw,
       contactNote: contactNoteRaw === '' ? null : contactNoteRaw,
@@ -73,8 +74,8 @@ export async function bookAreaAction(formData: FormData) {
   const { overlaps } = await bookEventArea(db, {
     eventProjectId: project.id,
     areaId: String(formData.get('areaId')),
-    from: new Date(String(formData.get('from'))),
-    to: new Date(String(formData.get('to'))),
+    from: stockholmWallClockToUtc(String(formData.get('from'))),
+    to: stockholmWallClockToUtc(String(formData.get('to'))),
     setupNote: String(formData.get('setupNote') ?? '').trim() || null,
   });
   revalidatePath(`/events/${slug}/edit`);
@@ -87,8 +88,8 @@ export async function bookAreaAction(formData: FormData) {
 
 export async function removeAreaAction(formData: FormData) {
   const slug = String(formData.get('slug'));
-  const { db } = await loadEditableProject(slug);
-  await removeEventArea(db, String(formData.get('eventAreaId')));
+  const { db, project } = await loadEditableProject(slug);
+  await removeEventArea(db, { eventAreaId: String(formData.get('eventAreaId')), eventProjectId: project.id });
   revalidatePath(`/events/${slug}/edit`);
   redirect(`/events/${slug}/edit`);
 }

@@ -6,13 +6,24 @@ import { ProjectNotFoundError } from '@/lib/projects/service';
 
 export type SignupResult = { status: 'going' | 'waitlist'; signup: EventSignup };
 
+export class SignupNotOpenError extends Error {
+  constructor() { super('Sign-up is not open for this event'); this.name = 'SignupNotOpenError'; }
+}
+
 export async function signUp(
   db: Db,
   input: { eventProjectId: string; userId: string; seats: number; note: string | null },
 ): Promise<SignupResult> {
   return db.transaction(async (tx) => {
+    const [project] = await tx.select().from(schema.project).where(eq(schema.project.id, input.eventProjectId));
+    if (!project) throw new ProjectNotFoundError(input.eventProjectId);
     const [details] = await tx.select().from(schema.eventDetails).where(eq(schema.eventDetails.projectId, input.eventProjectId)).for('update');
     if (!details) throw new ProjectNotFoundError(input.eventProjectId);
+    if (project.status !== 'published') throw new SignupNotOpenError();
+    const now = new Date();
+    const opensAt = details.signupOpensAt ?? project.publishedAt;
+    const closesAt = details.signupClosesAt ?? details.startsAt;
+    if ((opensAt && now < opensAt) || (closesAt && now > closesAt)) throw new SignupNotOpenError();
     let status: SignupStatus = 'going';
     if (details.hasCapacityLimit) {
       const others = await tx.select({ seats: schema.eventSignup.seats }).from(schema.eventSignup)
@@ -24,7 +35,6 @@ export async function signUp(
       const total = others.reduce((sum, o) => sum + o.seats, 0);
       status = total + input.seats <= details.capacity! ? 'going' : 'waitlist';
     }
-    const now = new Date();
     const [row] = await tx.insert(schema.eventSignup)
       .values({ eventProjectId: input.eventProjectId, userId: input.userId, status, seats: input.seats, note: input.note, createdAt: now })
       .onConflictDoUpdate({

@@ -15,12 +15,13 @@ import { getEventDetails } from '@/lib/events/details-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
 import { getProjectBySlug } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
+import { utcToStockholmWallClock } from '@/lib/timezone';
 import { bookAreaAction, removeAreaAction, updateEventDetailsAction, updateEventMetaAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 function toLocalInput(date: Date | null | undefined): string {
-  return date ? date.toISOString().slice(0, 16) : '';
+  return date ? utcToStockholmWallClock(date) : '';
 }
 
 export default async function EditEventPage({
@@ -71,15 +72,15 @@ export default async function EditEventPage({
           <form action={updateEventDetailsAction} className="space-y-4">
             <input type="hidden" name="slug" value={slug} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="startsAt">Starts</Label><Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={toLocalInput(details?.startsAt)} required /></div>
-              <div className="space-y-2"><Label htmlFor="endsAt">Ends</Label><Input id="endsAt" name="endsAt" type="datetime-local" defaultValue={toLocalInput(details?.endsAt)} required /></div>
+              <div className="space-y-2"><Label htmlFor="startsAt">Starts (Europe/Stockholm)</Label><Input id="startsAt" name="startsAt" type="datetime-local" defaultValue={toLocalInput(details?.startsAt)} required /></div>
+              <div className="space-y-2"><Label htmlFor="endsAt">Ends (Europe/Stockholm)</Label><Input id="endsAt" name="endsAt" type="datetime-local" defaultValue={toLocalInput(details?.endsAt)} required /></div>
             </div>
             <fieldset className="space-y-2">
               <Label>Capacity</Label>
               <div className="flex items-center gap-2">
                 <input type="radio" id="capacityLimited" name="capacityMode" value="limited" defaultChecked={details?.hasCapacityLimit ?? true} />
                 <Label htmlFor="capacityLimited">Limited to</Label>
-                <Input name="capacity" type="number" min={1} className="w-24" defaultValue={details?.capacity ?? ''} />
+                <Input name="capacity" type="number" min={1} className="w-24" defaultValue={details?.capacity ?? ''} required />
               </div>
               <div className="flex items-center gap-2">
                 <input type="radio" id="capacityUnlimited" name="capacityMode" value="unlimited" defaultChecked={details ? !details.hasCapacityLimit : false} />
@@ -87,8 +88,8 @@ export default async function EditEventPage({
               </div>
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="signupOpensAt">Sign-up opens</Label><Input id="signupOpensAt" name="signupOpensAt" type="datetime-local" defaultValue={toLocalInput(details?.signupOpensAt)} /></div>
-              <div className="space-y-2"><Label htmlFor="signupClosesAt">Sign-up closes</Label><Input id="signupClosesAt" name="signupClosesAt" type="datetime-local" defaultValue={toLocalInput(details?.signupClosesAt)} /></div>
+              <div className="space-y-2"><Label htmlFor="signupOpensAt">Sign-up opens (Europe/Stockholm)</Label><Input id="signupOpensAt" name="signupOpensAt" type="datetime-local" defaultValue={toLocalInput(details?.signupOpensAt)} /></div>
+              <div className="space-y-2"><Label htmlFor="signupClosesAt">Sign-up closes (Europe/Stockholm)</Label><Input id="signupClosesAt" name="signupClosesAt" type="datetime-local" defaultValue={toLocalInput(details?.signupClosesAt)} /></div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="priceSek">Price (öre, 0 = free)</Label><Input id="priceSek" name="priceSek" type="number" min={0} defaultValue={details?.priceSek ?? 0} /></div>
@@ -113,8 +114,8 @@ export default async function EditEventPage({
               {bookings.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell>{areas.find((a) => a.id === b.areaId)?.name ?? b.areaId}</TableCell>
-                  <TableCell>{b.from.toISOString()}</TableCell>
-                  <TableCell>{b.to.toISOString()}</TableCell>
+                  <TableCell>{toLocalInput(b.from)}</TableCell>
+                  <TableCell>{toLocalInput(b.to)}</TableCell>
                   <TableCell className="text-right">
                     <form action={removeAreaAction}>
                       <input type="hidden" name="slug" value={slug} />
@@ -135,8 +136,8 @@ export default async function EditEventPage({
               </select>
             </div>
             <div className="space-y-2"><Label htmlFor="setupNote">Setup note</Label><Input id="setupNote" name="setupNote" /></div>
-            <div className="space-y-2"><Label htmlFor="from">From</Label><Input id="from" name="from" type="datetime-local" required /></div>
-            <div className="space-y-2"><Label htmlFor="to">To</Label><Input id="to" name="to" type="datetime-local" required /></div>
+            <div className="space-y-2"><Label htmlFor="from">From (Europe/Stockholm)</Label><Input id="from" name="from" type="datetime-local" required /></div>
+            <div className="space-y-2"><Label htmlFor="to">To (Europe/Stockholm)</Label><Input id="to" name="to" type="datetime-local" required /></div>
             <Button type="submit" className="sm:col-span-2">Book area</Button>
           </form>
         </CardContent>

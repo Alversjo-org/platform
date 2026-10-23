@@ -37,7 +37,13 @@ describe('booking-service', () => {
   it('lists and removes bookings for an event', async () => {
     const { booking } = await bookEventArea(db, { eventProjectId: 'e1', areaId: 'kitchen', from: new Date(), to: new Date(), setupNote: null });
     expect(await listEventAreas(db, 'e1')).toHaveLength(1);
-    await removeEventArea(db, booking.id);
+    await removeEventArea(db, { eventAreaId: booking.id, eventProjectId: 'e1' });
     expect(await listEventAreas(db, 'e1')).toHaveLength(0);
+  });
+
+  it('does not remove a booking that belongs to a different event', async () => {
+    const { booking } = await bookEventArea(db, { eventProjectId: 'e1', areaId: 'kitchen', from: new Date(), to: new Date(), setupNote: null });
+    await removeEventArea(db, { eventAreaId: booking.id, eventProjectId: 'e2' }); // wrong event, should be a no-op
+    expect(await listEventAreas(db, 'e1')).toHaveLength(1);
   });
 });

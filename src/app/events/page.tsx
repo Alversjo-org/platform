@@ -6,6 +6,7 @@ import { getDb, schema } from '@/db';
 import type { EventDetails, Project } from '@/db/schema';
 import { getOrCreateIcalToken } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
+import { utcToStockholmWallClock } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,12 +15,12 @@ type EventRow = { project: Project; details: EventDetails };
 function EventTable({ items }: { items: EventRow[] }) {
   return (
     <Table>
-      <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>When</TableHead></TableRow></TableHeader>
+      <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>When (Europe/Stockholm)</TableHead></TableRow></TableHeader>
       <TableBody>
         {items.map(({ project, details }) => (
           <TableRow key={project.id}>
             <TableCell><Link href={`/events/${project.slug}`} className="underline">{project.title}</Link></TableCell>
-            <TableCell>{details.startsAt.toISOString()}</TableCell>
+            <TableCell>{utcToStockholmWallClock(details.startsAt)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

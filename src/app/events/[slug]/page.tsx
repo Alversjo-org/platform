@@ -12,8 +12,9 @@ import { listAreas } from '@/lib/areas/service';
 import { getEventDetails } from '@/lib/events/details-service';
 import { listSignups } from '@/lib/events/signup-service';
 import { ALLOWED_TRANSITIONS, getProjectBySlug } from '@/lib/projects/service';
-import { getEventRole } from '@/lib/projects/authorization';
+import { canViewEvent, getEventRole } from '@/lib/projects/authorization';
 import { requireUser } from '@/lib/session';
+import { utcToStockholmWallClock } from '@/lib/timezone';
 import {
   archiveEventAction, cancelEventAction, cancelSignupAction, closeEventAction, duplicateEventAction, publishAction, signUpAction,
 } from './actions';
@@ -33,11 +34,12 @@ export default async function EventDetailPage({
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();
+  const role = await getEventRole(db, project.id, user);
+  if (!canViewEvent(project.status, role)) notFound();
 
   const details = await getEventDetails(db, project.id);
   const bookings = await listEventAreas(db, project.id);
   const areas = await listAreas(db);
-  const role = await getEventRole(db, project.id, user);
   const isOrganiser = role !== null;
   const canManage = role === 'lead' || role === 'override';
   const allSignups = await listSignups(db, project.id);
@@ -64,7 +66,7 @@ export default async function EventDetailPage({
 
       {details && (
         <div className="mb-4 space-y-1 text-sm">
-          <p>When: {details.startsAt.toISOString()} – {details.endsAt.toISOString()}</p>
+          <p>When: {utcToStockholmWallClock(details.startsAt)} – {utcToStockholmWallClock(details.endsAt)} (Europe/Stockholm)</p>
           <p>Capacity: {details.hasCapacityLimit ? details.capacity : 'No limit'}</p>
           <p>Price: {details.priceSek === 0 ? 'Free' : `${details.priceSek} öre`}{details.priceNote ? ` — ${details.priceNote}` : ''}</p>
           {bookings.length > 0 && (

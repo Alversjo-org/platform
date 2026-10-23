@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { getDb, schema } from '@/db';
 import { sendSignupPromotedEmail } from '@/lib/email';
-import { cancelSignup, signUp } from '@/lib/events/signup-service';
+import { cancelSignup, signUp, SignupNotOpenError } from '@/lib/events/signup-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
 import {
   duplicateEvent, EventCreationBlockedError, getProjectBySlug, IncompleteEventError, InvalidTransitionError, transitionStatus,
@@ -21,8 +21,10 @@ export async function duplicateEventAction(formData: FormData) {
   if (!source) notFound();
   let dup;
   try {
+    await assertEventPermission(db, source.id, user, 'editDetails');
     dup = await duplicateEvent(db, { sourceProjectId: source.id, actorUserId: user.id });
   } catch (e) {
+    if (e instanceof NotAuthorizedError) redirect(`/events/${slug}?error=${encodeURIComponent('You are not authorized to duplicate this event.')}`);
     if (e instanceof EventCreationBlockedError) redirect(`/events/${slug}?error=${encodeURIComponent('You are not allowed to create events.')}`);
     throw e;
   }
@@ -35,7 +37,12 @@ export async function signUpAction(formData: FormData) {
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();
-  await signUp(db, { eventProjectId: project.id, userId: user.id, seats: 1, note: null });
+  try {
+    await signUp(db, { eventProjectId: project.id, userId: user.id, seats: 1, note: null });
+  } catch (e) {
+    if (e instanceof SignupNotOpenError) redirect(`/events/${slug}?error=${encodeURIComponent(e.message)}`);
+    throw e;
+  }
   revalidatePath(`/events/${slug}`);
   redirect(`/events/${slug}`);
 }
