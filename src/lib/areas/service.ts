@@ -7,7 +7,7 @@ export class AreaNotFoundError extends Error {
   constructor(id: string) { super(`No area ${id}`); this.name = 'AreaNotFoundError'; }
 }
 
-export type AreaInput = { name: string; description: string; capacity: number | null; bookable: boolean; mapRef: string | null };
+export type AreaInput = { name: string; description: string; capacity: number | null; bookable: boolean };
 
 export function listAreas(db: Db): Promise<Area[]> {
   return db.select().from(schema.area).orderBy(schema.area.name);

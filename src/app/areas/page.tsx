@@ -22,7 +22,7 @@ export default async function AreasPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead><TableHead>Description</TableHead><TableHead>Capacity</TableHead>
-            <TableHead>Bookable</TableHead><TableHead>Map ref</TableHead><TableHead />
+            <TableHead>Bookable</TableHead><TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -32,7 +32,6 @@ export default async function AreasPage() {
               <TableCell>{a.description || '—'}</TableCell>
               <TableCell>{a.capacity ?? '—'}</TableCell>
               <TableCell>{a.bookable ? 'Yes' : 'No'}</TableCell>
-              <TableCell>{a.mapRef ?? '—'}</TableCell>
               <TableCell className="text-right">
                 <details>
                   <summary className="cursor-pointer text-sm underline">Edit</summary>
@@ -41,7 +40,6 @@ export default async function AreasPage() {
                     <Input name="name" defaultValue={a.name} placeholder="Name" />
                     <Input name="description" defaultValue={a.description} placeholder="Description" />
                     <Input name="capacity" type="number" defaultValue={a.capacity ?? ''} placeholder="Capacity (optional)" />
-                    <Input name="mapRef" defaultValue={a.mapRef ?? ''} placeholder="Map ref (optional)" />
                     <div className="flex items-center gap-2">
                       <Checkbox id={`bookable-${a.id}`} name="bookable" defaultChecked={a.bookable} />
                       <Label htmlFor={`bookable-${a.id}`}>Bookable</Label>
@@ -61,7 +59,6 @@ export default async function AreasPage() {
             <div className="space-y-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required /></div>
             <div className="space-y-2"><Label htmlFor="description">Description</Label><Input id="description" name="description" /></div>
             <div className="space-y-2"><Label htmlFor="capacity">Capacity (optional)</Label><Input id="capacity" name="capacity" type="number" /></div>
-            <div className="space-y-2"><Label htmlFor="mapRef">Map ref (optional)</Label><Input id="mapRef" name="mapRef" /></div>
             <div className="flex items-center gap-2"><Checkbox id="bookable" name="bookable" defaultChecked /><Label htmlFor="bookable">Bookable</Label></div>
             <Button type="submit">Add area</Button>
           </form>

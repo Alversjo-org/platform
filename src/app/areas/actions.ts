@@ -8,13 +8,11 @@ import { requireMemberAdmin } from '@/lib/session';
 
 function parseAreaInput(formData: FormData) {
   const capacityRaw = String(formData.get('capacity') ?? '').trim();
-  const mapRefRaw = String(formData.get('mapRef') ?? '').trim();
   return {
     name: String(formData.get('name') ?? '').trim(),
     description: String(formData.get('description') ?? '').trim(),
     capacity: capacityRaw === '' ? null : Number(capacityRaw),
     bookable: formData.get('bookable') !== null,
-    mapRef: mapRefRaw === '' ? null : mapRefRaw,
   };
 }
 

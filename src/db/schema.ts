@@ -141,8 +141,13 @@ export const area = pgTable('area', {
   description: text('description').notNull().default(''),
   capacity: integer('capacity'), // advisory only
   bookable: boolean('bookable').notNull().default(true),
-  mapRef: text('map_ref'),
 });
+
+export const areaGridCell = pgTable('area_grid_cell', {
+  areaId: text('area_id').notNull().references(() => area.id, { onDelete: 'cascade' }),
+  col: integer('col').notNull(),
+  row: integer('row').notNull(),
+}, (t) => [primaryKey({ columns: [t.areaId, t.col, t.row] })]);
 
 export const eventArea = pgTable('event_area', {
   id: text('id').primaryKey(),
@@ -179,6 +184,7 @@ export type Project = typeof project.$inferSelect;
 export type ProjectMember = typeof projectMember.$inferSelect;
 export type EventDetails = typeof eventDetails.$inferSelect;
 export type Area = typeof area.$inferSelect;
+export type AreaGridCell = typeof areaGridCell.$inferSelect;
 export type EventArea = typeof eventArea.$inferSelect;
 export type EventSignup = typeof eventSignup.$inferSelect;
 export type DecisionLog = typeof decisionLog.$inferSelect;
