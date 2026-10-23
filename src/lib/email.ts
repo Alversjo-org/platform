@@ -30,3 +30,19 @@ export async function sendRenewalEmail({ to, subject, body }: RenewalMail): Prom
   const { error } = await new Resend(key).emails.send({ from, to: [to], subject, text: body });
   if (error) throw new Error(`Resend: ${error.message}`);
 }
+
+export type SignupPromotedMail = { to: string; eventTitle: string; eventUrl: string };
+
+/** Sent when a cancellation frees a seat and moves someone off the waitlist. */
+export async function sendSignupPromotedEmail({ to, eventTitle, eventUrl }: SignupPromotedMail): Promise<void> {
+  const subject = `You're in: ${eventTitle}`;
+  const text = `A seat opened up and you're now going to ${eventTitle}.\n\n${eventUrl}`;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.log(`[email] to=${to} subject="${subject}"`);
+    return;
+  }
+  const from = process.env.EMAIL_FROM ?? 'Alversjö <no-reply@notifications.alversjo.land>';
+  const { error } = await new Resend(key).emails.send({ from, to: [to], subject, text });
+  if (error) throw new Error(`Resend: ${error.message}`);
+}

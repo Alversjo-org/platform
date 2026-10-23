@@ -47,8 +47,10 @@ export async function AppShell({ user, children }: { user: SessionUser; children
           </DropdownMenu>
         </div>
         <nav className="flex items-center gap-4">
+          <Link href="/events" className="text-sm text-muted-foreground hover:text-foreground">Events</Link>
           <Link href="/boxes" className="text-sm text-muted-foreground hover:text-foreground">Boxes</Link>
           {isMemberAdmin(user) && <Link href="/members" className="text-sm text-muted-foreground hover:text-foreground">Members</Link>}
+          {isMemberAdmin(user) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
         </nav>
       </header>
       <Separator className="my-4" />

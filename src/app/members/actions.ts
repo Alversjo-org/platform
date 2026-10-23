@@ -30,6 +30,7 @@ export async function updateMemberAction(formData: FormData) {
       isActiveMember: formData.get('isActiveMember') !== null,
       membershipExpiresAt: expiresRaw === '' ? null : new Date(expiresRaw),
       contactNotes: String(formData.get('contactNotes') ?? '').trim() || null,
+      canCreateEvents: formData.get('canCreateEvents') !== null,
     });
   } catch (e) {
     const message = knownMessage(e);
