@@ -13,6 +13,11 @@ export function listAreas(db: Db): Promise<Area[]> {
   return db.select().from(schema.area).orderBy(schema.area.name);
 }
 
+export async function getArea(db: Db, id: string): Promise<Area | null> {
+  const [row] = await db.select().from(schema.area).where(eq(schema.area.id, id));
+  return row ?? null;
+}
+
 export async function createArea(db: Db, input: AreaInput): Promise<Area> {
   const [row] = await db.insert(schema.area).values({ id: randomUUID(), ...input }).returning();
   return row;

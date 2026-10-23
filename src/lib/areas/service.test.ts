@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, type Db } from '@/db';
-import { AreaNotFoundError, createArea, listAreas, updateArea } from './service';
+import { AreaNotFoundError, createArea, getArea, listAreas, updateArea } from './service';
 
 describe('area service', () => {
   let db: Db;
@@ -21,5 +21,11 @@ describe('area service', () => {
 
   it('throws for an unknown id', async () => {
     await expect(updateArea(db, { id: 'nope', name: 'X', description: '', capacity: null, bookable: true })).rejects.toBeInstanceOf(AreaNotFoundError);
+  });
+
+  it('getArea returns the matching row, or null if unknown', async () => {
+    const created = await createArea(db, { name: 'Kitchen', description: '', capacity: null, bookable: true });
+    expect((await getArea(db, created.id))?.id).toBe(created.id);
+    expect(await getArea(db, 'nope')).toBeNull();
   });
 });
