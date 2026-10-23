@@ -26,6 +26,11 @@ export function MapView({ areas }: { areas: MapAreaData[] }) {
 
   return (
     <div>
+      {areas.length === 0 && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          No sections have been mapped yet — check back soon, or ask an admin to assign grid cells to an area under &quot;Areas&quot;.
+        </p>
+      )}
       <div className="relative w-full">
         <img src={MAP_IMAGE_SRC} alt="Alversjö map" className="w-full" />
         <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
@@ -77,7 +82,7 @@ export function MapView({ areas }: { areas: MapAreaData[] }) {
                 {selected.bookings.map((b, i) => (
                   <li key={i}>
                     <Link href={`/events/${b.eventSlug}`} className="underline">{b.eventTitle}</Link>{' '}
-                    ({b.from} – {b.to})
+                    ({b.from} – {b.to}, Europe/Stockholm)
                   </li>
                 ))}
               </ul>

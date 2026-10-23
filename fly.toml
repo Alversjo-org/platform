@@ -5,8 +5,9 @@ kill_timeout = "30s"
 [build]
 
 [deploy]
-  # Applies pending Drizzle migrations before the new version takes traffic.
-  release_command = "npx tsx src/db/migrate.ts"
+  # Applies pending Drizzle migrations, then (idempotently) seeds the map
+  # sections, before the new version takes traffic.
+  release_command = "npx tsx src/db/migrate.ts && npx tsx src/db/seed-map-areas.ts"
 
 [env]
   PORT = "8080"

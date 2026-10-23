@@ -1,4 +1,5 @@
 import type { Area } from '@/db/schema';
+import { utcToStockholmWallClock } from '@/lib/timezone';
 import { areaColor } from './area-color';
 
 export type MapAreaData = {
@@ -19,7 +20,7 @@ export function buildMapAreaData(
   const bookingsByAreaId = new Map<string, Array<{ eventTitle: string; eventSlug: string; from: string; to: string }>>();
   for (const b of bookings) {
     const list = bookingsByAreaId.get(b.areaId) ?? [];
-    list.push({ eventTitle: b.eventTitle, eventSlug: b.eventSlug, from: b.from.toISOString().slice(0, 10), to: b.to.toISOString().slice(0, 10) });
+    list.push({ eventTitle: b.eventTitle, eventSlug: b.eventSlug, from: utcToStockholmWallClock(b.from), to: utcToStockholmWallClock(b.to) });
     bookingsByAreaId.set(b.areaId, list);
   }
 

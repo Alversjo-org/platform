@@ -39,7 +39,7 @@ export async function listUpcomingAreaBookings(db: Db, now: Date): Promise<Upcom
     from: schema.eventArea.from, to: schema.eventArea.to,
   }).from(schema.eventArea)
     .innerJoin(schema.project, eq(schema.project.id, schema.eventArea.eventProjectId))
-    .where(gt(schema.eventArea.to, now))
+    .where(and(gt(schema.eventArea.to, now), eq(schema.project.status, 'published')))
     .orderBy(schema.eventArea.from);
 }
 

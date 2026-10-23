@@ -13,6 +13,8 @@ function cellKey(col: number, row: number): string {
 export function CellPicker({ areaId, initialCells }: { areaId: string; initialCells: Array<{ col: number; row: number }> }) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initialCells.map((c) => cellKey(c.col, c.row))));
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const cellWidth = 1 / GRID_COLS;
   const cellHeight = 1 / GRID_ROWS;
@@ -36,12 +38,22 @@ export function CellPicker({ areaId, initialCells }: { areaId: string; initialCe
   }
 
   async function handleSave() {
+    if (saving) return;
     const cells = [...selected].map((key) => {
       const [col, row] = key.split(',').map(Number);
       return { col, row };
     });
-    await replaceAreaCellsAction(areaId, cells);
-    setSaved(true);
+    setSaving(true);
+    setSaved(false);
+    setError(null);
+    try {
+      await replaceAreaCellsAction(areaId, cells);
+      setSaved(true);
+    } catch {
+      setError('Could not save — try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -73,8 +85,9 @@ export function CellPicker({ areaId, initialCells }: { areaId: string; initialCe
         </svg>
       </div>
       <div className="mt-4 flex items-center gap-4">
-        <Button onClick={handleSave}>Save</Button>
+        <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         {saved && <span className="text-sm text-muted-foreground">Saved</span>}
+        {error && <span className="text-sm text-destructive">{error}</span>}
       </div>
     </div>
   );

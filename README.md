@@ -48,8 +48,17 @@ Merging to `main` is the entire deployment procedure. GitHub Actions runs one
 `check` job (`npm run db:check`, `lint`, `test`, `build`) and, only on `main`,
 a `deploy` job that runs `flyctl deploy --remote-only --ha=false` against
 `alversjo-platform`. Fly's `release_command` in `fly.toml` applies pending
-Drizzle migrations before the new version takes traffic, and `--ha=false`
-keeps the app at the single machine the design calls for.
+Drizzle migrations and (re-)seeds the map sections before the new version
+takes traffic, and `--ha=false` keeps the app at the single machine the
+design calls for.
+
+`db:seed-map-areas` (`src/db/seed-map-areas.ts`) is idempotent — it never
+duplicates an area and never overwrites cells an admin has already edited —
+so running it on every deploy is safe. It is **not** safe to run against a
+local dev database while `npm run dev` is also running against it: PGlite
+is a single-process embedded database, and a second process writing to the
+same `.pglite` directory at the same time can silently fail to propagate.
+Stop the dev server first, or run it before starting `npm run dev`.
 
 After any change to `src/db/schema.ts`, run `npm run db:generate` and commit
 the generated SQL in `drizzle/` with the schema change. CI's `db:check`
