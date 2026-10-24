@@ -11,10 +11,16 @@ import { listEventAreas } from '@/lib/areas/booking-service';
 import { listAreas } from '@/lib/areas/service';
 import { getEventDetails } from '@/lib/events/details-service';
 import { listSignups } from '@/lib/events/signup-service';
+import { oreToSek } from '@/lib/money';
 import { ALLOWED_TRANSITIONS, getProjectBySlug } from '@/lib/projects/service';
 import { canViewEvent, getEventRole } from '@/lib/projects/authorization';
 import { requireUser } from '@/lib/session';
-import { utcToStockholmWallClock } from '@/lib/timezone';
+import { splitStockholmDateAndTime } from '@/lib/timezone';
+
+function formatEventWhen(date: Date): string {
+  const { date: d, time } = splitStockholmDateAndTime(date);
+  return time ? `${d} ${time}` : d;
+}
 import {
   archiveEventAction, cancelEventAction, cancelSignupAction, closeEventAction, duplicateEventAction, publishAction, signUpAction,
 } from './actions';
@@ -66,9 +72,9 @@ export default async function EventDetailPage({
 
       {details && (
         <div className="mb-4 space-y-1 text-sm">
-          <p>When: {utcToStockholmWallClock(details.startsAt)} – {utcToStockholmWallClock(details.endsAt)} (Europe/Stockholm)</p>
+          <p>When: {formatEventWhen(details.startsAt)} – {formatEventWhen(details.endsAt)} (Europe/Stockholm)</p>
           <p>Capacity: {details.hasCapacityLimit ? details.capacity : 'No limit'}</p>
-          <p>Price: {details.priceSek === 0 ? 'Free' : `${details.priceSek} öre`}{details.priceNote ? ` — ${details.priceNote}` : ''}</p>
+          <p>Price: {details.priceSek === 0 ? 'Free' : `${oreToSek(details.priceSek)} SEK`}{details.priceNote ? ` — ${details.priceNote}` : ''}</p>
           {bookings.length > 0 && (
             <p>Areas: {bookings.map((b) => areas.find((a) => a.id === b.areaId)?.name ?? b.areaId).join(', ')}</p>
           )}

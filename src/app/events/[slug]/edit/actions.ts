@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { getDb } from '@/db';
 import { InvalidCapacityError, upsertEventDetails } from '@/lib/events/details-service';
+import { parseEventDetailsForm } from '@/lib/events/parse-details-form';
 import { bookEventArea, removeEventArea } from '@/lib/areas/booking-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
 import { getProjectBySlug, updateProjectMeta } from '@/lib/projects/service';
@@ -40,26 +41,8 @@ export async function updateEventMetaAction(formData: FormData) {
 export async function updateEventDetailsAction(formData: FormData) {
   const slug = String(formData.get('slug'));
   const { db, project } = await loadEditableProject(slug);
-  const hasCapacityLimit = formData.get('capacityMode') === 'limited';
-  const capacity = hasCapacityLimit ? Number(formData.get('capacity')) : null;
-  const signupOpensRaw = String(formData.get('signupOpensAt') ?? '').trim();
-  const signupClosesRaw = String(formData.get('signupClosesAt') ?? '').trim();
-  const priceNoteRaw = String(formData.get('priceNote') ?? '').trim();
-  const contactNoteRaw = String(formData.get('contactNote') ?? '').trim();
   try {
-    await upsertEventDetails(db, {
-      projectId: project.id,
-      startsAt: stockholmWallClockToUtc(String(formData.get('startsAt'))),
-      endsAt: stockholmWallClockToUtc(String(formData.get('endsAt'))),
-      hasCapacityLimit,
-      capacity,
-      signupOpensAt: signupOpensRaw === '' ? null : stockholmWallClockToUtc(signupOpensRaw),
-      signupClosesAt: signupClosesRaw === '' ? null : stockholmWallClockToUtc(signupClosesRaw),
-      priceSek: Number(formData.get('priceSek') ?? 0) || 0,
-      priceNote: priceNoteRaw === '' ? null : priceNoteRaw,
-      contactNote: contactNoteRaw === '' ? null : contactNoteRaw,
-      showSignupsToParticipants: formData.get('showSignupsToParticipants') !== null,
-    });
+    await upsertEventDetails(db, { projectId: project.id, ...parseEventDetailsForm(formData) });
   } catch (e) {
     if (e instanceof InvalidCapacityError) redirect(`/events/${slug}/edit?error=${encodeURIComponent(e.message)}`);
     throw e;

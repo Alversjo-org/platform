@@ -29,6 +29,11 @@ describe('createEvent', () => {
     expect(member).toMatchObject({ userId: 'u1', role: 'lead' });
   });
 
+  it('accepts an optional body at creation time', async () => {
+    const p = await createEvent(db, { title: 'With body', summary: '', body: 'Full details here', ownerUserId: 'u1' });
+    expect(p.body).toBe('Full details here');
+  });
+
   it('dedupes the slug when the title repeats', async () => {
     const a = await createEvent(db, { title: 'Work day', summary: '', ownerUserId: 'u1' });
     const b = await createEvent(db, { title: 'Work day', summary: '', ownerUserId: 'u1' });
@@ -63,10 +68,11 @@ describe('transitionStatus', () => {
     await expect(transitionStatus(db, { projectId: p.id, to: 'published', actorUserId: 'u1' })).rejects.toBeInstanceOf(IncompleteEventError);
   });
 
-  it('rejects publishing a draft with no area booked', async () => {
+  it('publishes a draft with event_details but no area booked (areas are optional)', async () => {
     const p = await createEvent(db, { title: 'No area', summary: '', ownerUserId: 'u1' });
     await db.insert(schema.eventDetails).values({ projectId: p.id, startsAt: new Date(), endsAt: new Date(), hasCapacityLimit: false });
-    await expect(transitionStatus(db, { projectId: p.id, to: 'published', actorUserId: 'u1' })).rejects.toBeInstanceOf(IncompleteEventError);
+    const published = await transitionStatus(db, { projectId: p.id, to: 'published', actorUserId: 'u1' });
+    expect(published.status).toBe('published');
   });
 
   it('rejects a transition not in ALLOWED_TRANSITIONS', async () => {
