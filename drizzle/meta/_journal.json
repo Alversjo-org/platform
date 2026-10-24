@@ -36,6 +36,13 @@
       "when": 1792683773280,
       "tag": "0004_groovy_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792760127330,
+      "tag": "0005_lush_silver_sable",
+      "breakpoints": true
     }
   ]
 }

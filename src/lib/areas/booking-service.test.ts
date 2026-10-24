@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
-import { bookEventArea, listEventAreas, removeEventArea } from './booking-service';
+import { bookEventArea, listEventAreas, listUpcomingAreaBookings, removeEventArea } from './booking-service';
 
 describe('booking-service', () => {
   let db: Db;
@@ -9,8 +9,8 @@ describe('booking-service', () => {
     await db.insert(schema.user).values({ id: 'u1', email: 'u1@example.org' });
     await db.insert(schema.area).values({ id: 'kitchen', name: 'Kitchen' });
     await db.insert(schema.project).values([
-      { id: 'e1', slug: 'e1', title: 'Breakfast', kind: 'event', ownerUserId: 'u1' },
-      { id: 'e2', slug: 'e2', title: 'Lunch', kind: 'event', ownerUserId: 'u1' },
+      { id: 'e1', slug: 'e1', title: 'Breakfast', kind: 'event', status: 'published', ownerUserId: 'u1' },
+      { id: 'e2', slug: 'e2', title: 'Lunch', kind: 'event', status: 'published', ownerUserId: 'u1' },
     ]);
   });
 
@@ -45,5 +45,22 @@ describe('booking-service', () => {
     const { booking } = await bookEventArea(db, { eventProjectId: 'e1', areaId: 'kitchen', from: new Date(), to: new Date(), setupNote: null });
     await removeEventArea(db, { eventAreaId: booking.id, eventProjectId: 'e2' }); // wrong event, should be a no-op
     expect(await listEventAreas(db, 'e1')).toHaveLength(1);
+  });
+
+  describe('listUpcomingAreaBookings', () => {
+    it('includes a booking that has not ended yet, excludes one that already has', async () => {
+      await bookEventArea(db, { eventProjectId: 'e1', areaId: 'kitchen', from: new Date('2027-06-20T08:00:00Z'), to: new Date('2027-06-20T09:00:00Z'), setupNote: null });
+      await bookEventArea(db, { eventProjectId: 'e2', areaId: 'kitchen', from: new Date('2020-01-01T08:00:00Z'), to: new Date('2020-01-01T09:00:00Z'), setupNote: null });
+      const upcoming = await listUpcomingAreaBookings(db, new Date('2027-01-01T00:00:00Z'));
+      expect(upcoming).toHaveLength(1);
+      expect(upcoming[0]).toMatchObject({ areaId: 'kitchen', eventProjectId: 'e1' });
+    });
+
+    it('excludes a booking for an event that is not published', async () => {
+      await db.insert(schema.project).values({ id: 'draft1', slug: 'draft1', title: 'Secret planning', kind: 'event', status: 'draft', ownerUserId: 'u1' });
+      await bookEventArea(db, { eventProjectId: 'draft1', areaId: 'kitchen', from: new Date('2027-06-20T08:00:00Z'), to: new Date('2027-06-20T09:00:00Z'), setupNote: null });
+      const upcoming = await listUpcomingAreaBookings(db, new Date('2027-01-01T00:00:00Z'));
+      expect(upcoming.find((b) => b.eventProjectId === 'draft1')).toBeUndefined();
+    });
   });
 });

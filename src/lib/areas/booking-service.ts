@@ -30,6 +30,19 @@ export function listEventAreas(db: Db, eventProjectId: string): Promise<EventAre
   return db.select().from(schema.eventArea).where(eq(schema.eventArea.eventProjectId, eventProjectId));
 }
 
+export type UpcomingAreaBooking = { areaId: string; eventProjectId: string; eventSlug: string; eventTitle: string; from: Date; to: Date };
+
+export async function listUpcomingAreaBookings(db: Db, now: Date): Promise<UpcomingAreaBooking[]> {
+  return db.select({
+    areaId: schema.eventArea.areaId, eventProjectId: schema.eventArea.eventProjectId,
+    eventSlug: schema.project.slug, eventTitle: schema.project.title,
+    from: schema.eventArea.from, to: schema.eventArea.to,
+  }).from(schema.eventArea)
+    .innerJoin(schema.project, eq(schema.project.id, schema.eventArea.eventProjectId))
+    .where(and(gt(schema.eventArea.to, now), eq(schema.project.status, 'published')))
+    .orderBy(schema.eventArea.from);
+}
+
 export async function removeEventArea(db: Db, input: { eventAreaId: string; eventProjectId: string }): Promise<void> {
   await db.delete(schema.eventArea)
     .where(and(eq(schema.eventArea.id, input.eventAreaId), eq(schema.eventArea.eventProjectId, input.eventProjectId)));

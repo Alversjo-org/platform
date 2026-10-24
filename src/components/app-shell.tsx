@@ -48,6 +48,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
         </div>
         <nav className="flex items-center gap-4">
           <Link href="/events" className="text-sm text-muted-foreground hover:text-foreground">Events</Link>
+          <Link href="/map" className="text-sm text-muted-foreground hover:text-foreground">Map</Link>
           <Link href="/boxes" className="text-sm text-muted-foreground hover:text-foreground">Boxes</Link>
           {isMemberAdmin(user) && <Link href="/members" className="text-sm text-muted-foreground hover:text-foreground">Members</Link>}
           {isMemberAdmin(user) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
