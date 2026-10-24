@@ -39,14 +39,14 @@ async function uniqueSlug(db: Db, base: string): Promise<string> {
   return candidate;
 }
 
-export async function createEvent(db: Db, input: { title: string; summary: string; ownerUserId: string }): Promise<Project> {
+export async function createEvent(db: Db, input: { title: string; summary: string; body?: string; ownerUserId: string }): Promise<Project> {
   const [owner] = await db.select().from(schema.user).where(eq(schema.user.id, input.ownerUserId));
   if (!owner?.canCreateEvents) throw new EventCreationBlockedError(input.ownerUserId);
   const slug = await uniqueSlug(db, slugify(input.title));
   return db.transaction(async (tx) => {
     const id = randomUUID();
     const [row] = await tx.insert(schema.project).values({
-      id, slug, title: input.title, summary: input.summary, kind: 'event', status: 'draft', visibility: 'members',
+      id, slug, title: input.title, summary: input.summary, body: input.body ?? '', kind: 'event', status: 'draft', visibility: 'members',
       ownerUserId: input.ownerUserId,
     }).returning();
     await tx.insert(schema.projectMember).values({ projectId: id, userId: input.ownerUserId, role: 'lead' });
@@ -96,8 +96,6 @@ export async function transitionStatus(db: Db, input: { projectId: string; to: P
   if (input.to === 'published') {
     const [details] = await db.select().from(schema.eventDetails).where(eq(schema.eventDetails.projectId, input.projectId));
     if (!details) throw new IncompleteEventError('missing event details');
-    const [anyArea] = await db.select().from(schema.eventArea).where(eq(schema.eventArea.eventProjectId, input.projectId));
-    if (!anyArea) throw new IncompleteEventError('no area booked');
   }
   const [row] = await db.update(schema.project)
     .set({ status: input.to, publishedAt: input.to === 'published' ? new Date() : current.publishedAt, updatedAt: new Date() })

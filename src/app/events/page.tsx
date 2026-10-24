@@ -1,16 +1,22 @@
 import { and, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getDb, schema } from '@/db';
 import type { EventDetails, Project } from '@/db/schema';
 import { getOrCreateIcalToken } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
-import { utcToStockholmWallClock } from '@/lib/timezone';
+import { splitStockholmDateAndTime } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
 type EventRow = { project: Project; details: EventDetails };
+
+function formatEventWhen(date: Date): string {
+  const { date: d, time } = splitStockholmDateAndTime(date);
+  return time ? `${d} ${time}` : d;
+}
 
 function EventTable({ items }: { items: EventRow[] }) {
   return (
@@ -20,7 +26,7 @@ function EventTable({ items }: { items: EventRow[] }) {
         {items.map(({ project, details }) => (
           <TableRow key={project.id}>
             <TableCell><Link href={`/events/${project.slug}`} className="underline">{project.title}</Link></TableCell>
-            <TableCell>{utcToStockholmWallClock(details.startsAt)}</TableCell>
+            <TableCell>{formatEventWhen(details.startsAt)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -47,7 +53,7 @@ export default async function EventsPage() {
         <h1 className="text-xl font-semibold">Events</h1>
         <div className="flex gap-4">
           <a href={`/events/members.ics?token=${icalToken}`} className="text-sm underline">Subscribe to all events</a>
-          <Link href="/events/new" className="text-sm underline">New event</Link>
+          <Button render={<Link href="/events/new" />}>New event</Button>
         </div>
       </div>
       <h2 className="mb-2 text-lg font-medium">Upcoming</h2>
