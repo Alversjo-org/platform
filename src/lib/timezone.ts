@@ -25,3 +25,14 @@ export function utcToStockholmWallClock(date: Date): string {
   const p = stockholmPartsAt(date);
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
+
+/** Combines a "YYYY-MM-DD" date with an optional "HH:mm" time (both Europe/Stockholm) into the UTC instant. No time defaults to midnight. */
+export function combineStockholmDateAndTime(date: string, time: string | null): Date {
+  return stockholmWallClockToUtc(`${date}T${time || '00:00'}`);
+}
+
+/** Splits a UTC instant into its Europe/Stockholm date and time-of-day; a stored midnight is reported as a date-only value (time: null). */
+export function splitStockholmDateAndTime(instant: Date): { date: string; time: string | null } {
+  const [date, time] = utcToStockholmWallClock(instant).split('T');
+  return { date, time: time === '00:00' ? null : time };
+}
