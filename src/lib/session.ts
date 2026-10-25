@@ -1,26 +1,31 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { eq } from 'drizzle-orm';
+import { getDb, schema, type Db } from '@/db';
 import type { Role } from '@/db/schema';
 import { getAuth } from '@/lib/auth';
 
-export type SessionUser = { id: string; email: string; role: Role };
+export type SessionUser = { id: string; email: string; roles: Role[] };
 
-export function roleFromRaw(raw: string | undefined): Role {
-  if (raw === 'admin') return 'admin';
-  if (raw === 'member-admin') return 'member-admin';
-  return 'member';
+export async function rolesFor(db: Db, userId: string): Promise<Role[]> {
+  const rows = await db.select({ role: schema.userRole.role }).from(schema.userRole).where(eq(schema.userRole.userId, userId));
+  return rows.map((r) => r.role);
 }
 
-export function isMemberAdmin(user: { role: Role }): boolean {
-  return user.role === 'admin' || user.role === 'member-admin';
+export function hasAnyRole(user: { roles: Role[] }, roles: Role[]): boolean {
+  return roles.some((r) => user.roles.includes(r));
+}
+
+export function isMemberAdmin(user: { roles: Role[] }): boolean {
+  return hasAnyRole(user, ['admin', 'member-admin']);
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   const auth = await getAuth();
   const s = await auth.api.getSession({ headers: await headers() });
   if (!s) return null;
-  const role = roleFromRaw((s.user as { role?: string }).role);
-  return { id: s.user.id, email: s.user.email, role };
+  const roles = await rolesFor(await getDb(), s.user.id);
+  return { id: s.user.id, email: s.user.email, roles };
 }
 
 export async function requireUser(): Promise<SessionUser> {
@@ -29,16 +34,15 @@ export async function requireUser(): Promise<SessionUser> {
   return u;
 }
 
-export async function requireAdmin(): Promise<SessionUser> {
+export async function requireAnyRole(roles: Role[]): Promise<SessionUser> {
   const u = await requireUser();
-  // A member who reaches an admin page is not an error to report, just someone in the
+  // A member who reaches a gated page is not an error to report, just someone in the
   // wrong place: send them to their own homepage.
-  if (u.role !== 'admin') redirect('/');
+  if (!hasAnyRole(u, roles)) redirect('/');
   return u;
 }
 
-export async function requireMemberAdmin(): Promise<SessionUser> {
-  const u = await requireUser();
-  if (!isMemberAdmin(u)) redirect('/');
-  return u;
-}
+export const requireAdmin = () => requireAnyRole(['admin']);
+export const requireMemberAdmin = () => requireAnyRole(['admin', 'member-admin']);
+export const requireMapper = () => requireAnyRole(['admin', 'mapper']);
+export const requireRoleAdmin = () => requireAnyRole(['admin', 'role-admin']);
