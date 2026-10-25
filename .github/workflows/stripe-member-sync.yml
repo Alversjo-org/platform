@@ -1,0 +1,14 @@
+name: stripe-member-sync
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger member sync
+        run: |
+          curl --fail -X POST https://members.alversjo.land/api/cron/stripe-sync \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
