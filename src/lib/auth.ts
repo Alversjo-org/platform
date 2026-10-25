@@ -21,19 +21,18 @@ export function buildAuth(db: Db, opts: { sendOtp?: (mail: OtpMail) => Promise<v
     secret: process.env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, { provider: 'pg', schema }),
     user: {
-      additionalFields: {
-        role: { type: ['member', 'member-admin', 'admin'], required: false, defaultValue: 'member', input: false },
-      },
       changeEmail: { enabled: true },
     },
     databaseHooks: {
       user: {
         create: {
-          // Role is decided once, at first login, from ADMIN_EMAILS. It lives on
-          // the user id afterwards, so changing the email keeps it.
-          before: async (u) => ({
-            data: { ...u, role: adminEmails().includes(u.email.toLowerCase()) ? 'admin' : 'member' },
-          }),
+          // Role is decided once, at first login, from ADMIN_EMAILS. An `after` hook (not
+          // `before`) because it inserts into user_role, which needs the user's id to exist.
+          after: async (u) => {
+            if (adminEmails().includes(u.email.toLowerCase())) {
+              await db.insert(schema.userRole).values({ userId: u.id, role: 'admin', grantedByUserId: null });
+            }
+          },
         },
       },
     },
