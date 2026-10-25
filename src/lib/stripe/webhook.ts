@@ -9,12 +9,12 @@ export interface SubscriptionRetriever {
 }
 
 // Stripe moved current_period_end from the subscription itself to each subscription item.
-function periodEndOf(subscription: Stripe.Subscription): Date | undefined {
+export function periodEndOf(subscription: Stripe.Subscription): Date | undefined {
   const periodEndSec = subscription.items.data[0]?.current_period_end;
   return periodEndSec === undefined ? undefined : new Date(periodEndSec * 1000);
 }
 
-function customerIdOf(value: string | Stripe.Customer | Stripe.DeletedCustomer | null): string | null {
+export function customerIdOf(value: string | Stripe.Customer | Stripe.DeletedCustomer | null): string | null {
   if (!value) return null;
   return typeof value === 'string' ? value : value.id;
 }

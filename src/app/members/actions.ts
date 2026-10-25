@@ -7,6 +7,8 @@ import { getDb, schema } from '@/db';
 import { sendRenewalEmail } from '@/lib/email';
 import { InvalidPhoneError, touchLastContacted, updateMember, UserNotFoundError } from '@/lib/members/service';
 import { requireMemberAdmin } from '@/lib/session';
+import { getStripe } from '@/lib/stripe/client';
+import { syncMembersFromStripe } from '@/lib/stripe/sync';
 
 function knownMessage(e: unknown): string | undefined {
   if (e instanceof UserNotFoundError || e instanceof InvalidPhoneError) return e.message;
@@ -56,4 +58,14 @@ export async function sendRenewalAskAction(formData: FormData) {
   revalidatePath(`/members/${id}`);
   revalidatePath('/members');
   redirect(`/members/${id}`);
+}
+
+export async function syncFromStripeAction() {
+  await requireMemberAdmin();
+  const results = await syncMembersFromStripe(await getDb(), getStripe());
+  const created = results.filter((r) => r.status === 'created').length;
+  const matched = results.filter((r) => r.status === 'matched').length;
+  const errored = results.filter((r) => r.status === 'error').length;
+  revalidatePath('/members');
+  redirect(`/members?synced=1&created=${created}&matched=${matched}&error=${errored}`);
 }

@@ -8,20 +8,24 @@ export const LOOKUP_KEYS: Record<MembershipPlan, string> = {
   monthly: 'membership_monthly',
 };
 
-/** The minimal slice of the Stripe client createCheckoutSession needs — a real Stripe instance satisfies this structurally. */
-export interface CheckoutClient {
-  checkout: {
-    sessions: {
-      create(params: Stripe.Checkout.SessionCreateParams): Promise<{ url: string | null }>;
-    };
-  };
+/** The slice of the Stripe client needed to resolve a membership plan's Price by lookup_key. */
+export interface PriceLookupClient {
   prices: {
     list(params: { lookup_keys: string[]; active?: boolean; limit?: number }): Promise<{ data: { id: string }[] }>;
   };
 }
 
+/** The minimal slice of the Stripe client createCheckoutSession needs — a real Stripe instance satisfies this structurally. */
+export interface CheckoutClient extends PriceLookupClient {
+  checkout: {
+    sessions: {
+      create(params: Stripe.Checkout.SessionCreateParams): Promise<{ url: string | null }>;
+    };
+  };
+}
+
 /** Resolves the plan's Price by its Stripe lookup_key, instead of a hardcoded Price ID — lets prices be managed entirely in Stripe. */
-async function priceFor(stripe: CheckoutClient, plan: MembershipPlan): Promise<string> {
+export async function priceFor(stripe: PriceLookupClient, plan: MembershipPlan): Promise<string> {
   const lookupKey = LOOKUP_KEYS[plan];
   const { data } = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
   const price = data[0];
