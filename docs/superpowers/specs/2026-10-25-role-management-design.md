@@ -126,7 +126,22 @@ breaks at the type level and needs to become `hasAnyRole(user, ['admin'])`:
   — unchanged, still keyed on `admin`/`member-admin`.
 - `src/components/app-shell.tsx` nav — "Areas" link visibility switches from
   `isMemberAdmin` to `hasAnyRole(['admin', 'mapper'])`; new "Roles" link
-  visible under `hasAnyRole(['admin', 'role-admin'])`.
+  visible under `hasAnyRole(['admin', 'role-admin'])`. The account-menu role
+  badge (currently one `<Badge>{user.role}</Badge>`) renders one badge per
+  entry in `user.roles` instead.
+- `src/app/api/internal/box-session/route.ts` — resolves role a different
+  way than every other call site: it builds its own session from a raw
+  cookie header (not through `getSessionUser()`, which reads `headers()`
+  from the Next.js request context this route doesn't have), then reads
+  `session.user.role` directly and calls `roleFromRaw`. Both of those
+  disappear with the column. `session.ts` exports a `rolesFor(db, userId):
+  Promise<Role[]>` helper (the query `getSessionUser()` now runs against
+  `user_role` internally) for this route to call directly with
+  `session.user.id`. `roleFromRaw` is deleted (nothing else uses it).
+
+`isMemberAdmin(user)` is kept as a thin wrapper over the same roles the
+array now carries (`hasAnyRole(user, ['admin', 'member-admin'])`), for the
+same reason the `requireX` wrappers are kept.
 
 ## 5. Role management page (`/roles`)
 
