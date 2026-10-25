@@ -106,9 +106,19 @@ built on the shared `requireAnyRole` — call sites don't change shape, and
 `admin` can't be left out of a new gate's list by accident the way a
 freestanding per-site check could.
 
-Every current call site keeps its existing gate **except** areas:
+Every current call site keeps its existing gate **except** areas. This
+touches every place that reads `user.role` directly, not just the
+`requireX()` call sites — `SessionUser.role: Role` becomes
+`SessionUser.roles: Role[]`, so anything doing `user.role === 'admin'`
+breaks at the type level and needs to become `hasAnyRole(user, ['admin'])`:
 
-- `src/app/boxes/**` — stays `requireAdmin()`.
+- `src/app/boxes/**` and `src/lib/boxes/access.ts` — stay admin-only, but
+  three spots currently check `user.role === 'admin'` directly instead of
+  going through a named helper and need updating to `hasAnyRole`:
+  `canAccessBox()`/`listBoxesFor()` in `src/lib/boxes/access.ts` (also
+  update `AccessUser` from `{ role: Role }` to `{ roles: Role[] }`), the
+  inline `isAdmin` check in `src/app/boxes/[id]/page.tsx`, and the "New box"
+  button visibility check in `src/app/boxes/page.tsx`.
 - `src/app/members/**`, `src/app/members/actions.ts` — stays `requireMemberAdmin()`.
 - `src/app/areas/**`, `src/app/areas/[id]/cells/**` — changes from
   `requireMemberAdmin()` to `requireMapper()`.
@@ -174,8 +184,9 @@ databaseHooks: {
 `additionalFields.role` is removed from the BetterAuth config — `role` is no
 longer a `user` column.
 
-**Data migration** (one data-carrying `drizzle-kit generate` migration, same
-mechanism the renewal-message default row already uses):
+**Data migration** (one `drizzle-kit generate` migration, hand-edited to
+carry data — there's no existing data-carrying migration in this repo to
+copy from, so this is written from scratch, not adapted from a precedent):
 
 1. Create `user_role`.
 2. Backfill: every `user` with `role = 'admin'` → insert `{role: 'admin'}`.
