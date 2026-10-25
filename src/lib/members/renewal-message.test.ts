@@ -9,7 +9,7 @@ describe('renewal message settings', () => {
 
   beforeEach(async () => {
     db = await createDb('pglite://memory');
-    await db.insert(schema.user).values({ id: 'admin', email: 'admin@example.org', role: 'admin' });
+    await db.insert(schema.user).values({ id: 'admin', email: 'admin@example.org' });
   });
 
   it('falls back to the built-in default when nothing is configured', async () => {

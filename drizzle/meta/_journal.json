@@ -43,6 +43,13 @@
       "when": 1792760127330,
       "tag": "0005_lush_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792951758981,
+      "tag": "0006_smooth_luke_cage",
+      "breakpoints": true
     }
   ]
 }
