@@ -37,6 +37,12 @@ describe('upsertEventDetails', () => {
     await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: 0 })).rejects.toBeInstanceOf(InvalidCapacityError);
   });
 
+  it('tells the organiser how to fix an invalid capacity, since this message is shown on the page as-is', async () => {
+    await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: 0 })).rejects.toThrow(
+      "Enter a capacity of 1 or more, or choose 'No limit'.",
+    );
+  });
+
   it('rejects hasCapacityLimit=true with a negative or non-finite capacity', async () => {
     await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: -1 })).rejects.toBeInstanceOf(InvalidCapacityError);
     await expect(upsertEventDetails(db, { ...base, hasCapacityLimit: true, capacity: NaN })).rejects.toBeInstanceOf(InvalidCapacityError);
