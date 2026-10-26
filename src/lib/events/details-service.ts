@@ -3,7 +3,7 @@ import { schema, type Db } from '@/db';
 import type { EventDetails } from '@/db/schema';
 
 export class InvalidCapacityError extends Error {
-  constructor() { super('capacity must be set iff hasCapacityLimit is true'); this.name = 'InvalidCapacityError'; }
+  constructor(message = 'capacity must be set iff hasCapacityLimit is true') { super(message); this.name = 'InvalidCapacityError'; }
 }
 
 export type UpsertEventDetailsInput = {
@@ -22,7 +22,9 @@ export type UpsertEventDetailsInput = {
 
 export async function upsertEventDetails(db: Db, input: UpsertEventDetailsInput): Promise<EventDetails> {
   if ((input.capacity === null) !== !input.hasCapacityLimit) throw new InvalidCapacityError();
-  if (input.hasCapacityLimit && !(Number.isFinite(input.capacity) && input.capacity! >= 1)) throw new InvalidCapacityError();
+  if (input.hasCapacityLimit && !(Number.isFinite(input.capacity) && input.capacity! >= 1)) {
+    throw new InvalidCapacityError("Enter a capacity of 1 or more, or choose 'No limit'.");
+  }
   const [row] = await db.insert(schema.eventDetails)
     .values(input)
     .onConflictDoUpdate({ target: schema.eventDetails.projectId, set: input })

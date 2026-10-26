@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { CapacityFieldset } from '@/components/events/capacity-fieldset';
 import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
 import { listEventAreas } from '@/lib/areas/booking-service';
@@ -85,18 +86,7 @@ export default async function EditEventPage({
                 <div className="space-y-2"><Label htmlFor="endsTime">Ends at</Label><Input id="endsTime" name="endsTime" type="time" defaultValue={ends.time ?? ''} /></div>
               </div>
             </details>
-            <fieldset className="space-y-2">
-              <Label>Capacity</Label>
-              <div className="flex items-center gap-2">
-                <input type="radio" id="capacityLimited" name="capacityMode" value="limited" defaultChecked={details?.hasCapacityLimit ?? true} />
-                <Label htmlFor="capacityLimited">Limited to</Label>
-                <Input name="capacity" type="number" min={1} className="w-24" defaultValue={details?.capacity ?? ''} />
-              </div>
-              <div className="flex items-center gap-2">
-                <input type="radio" id="capacityUnlimited" name="capacityMode" value="unlimited" defaultChecked={details ? !details.hasCapacityLimit : false} />
-                <Label htmlFor="capacityUnlimited">No limit</Label>
-              </div>
-            </fieldset>
+            <CapacityFieldset defaultHasLimit={details?.hasCapacityLimit ?? true} defaultCapacity={details?.capacity ?? ''} />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="signupOpensAt">Sign-up opens (Europe/Stockholm)</Label><Input id="signupOpensAt" name="signupOpensAt" type="datetime-local" defaultValue={toLocalInput(details?.signupOpensAt)} /></div>
               <div className="space-y-2"><Label htmlFor="signupClosesAt">Sign-up closes (Europe/Stockholm)</Label><Input id="signupClosesAt" name="signupClosesAt" type="datetime-local" defaultValue={toLocalInput(details?.signupClosesAt)} /></div>
