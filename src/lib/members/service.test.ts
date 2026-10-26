@@ -22,6 +22,7 @@ describe('member service', () => {
     const updated = await updateMember(db, {
       id: 'viktor', name: 'Viktor Andersson', nickname: 'Vik', phoneNumber: '+46701234567', discordHandle: 'vik#1234',
       isActiveMember: true, membershipExpiresAt: expiresAt, contactNotes: 'Paid at the door', canCreateEvents: true,
+      lastContactedAt: null,
     });
     expect(updated).toMatchObject({
       name: 'Viktor Andersson', nickname: 'Vik', phoneNumber: '+46701234567', discordHandle: 'vik#1234',
@@ -30,15 +31,32 @@ describe('member service', () => {
     expect(updated.membershipExpiresAt).toEqual(expiresAt);
   });
 
+  it('updateMember persists lastContactedAt, including clearing it back to null', async () => {
+    const updated = await updateMember(db, {
+      id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: null, discordHandle: null,
+      isActiveMember: true, membershipExpiresAt: null, contactNotes: null, canCreateEvents: true,
+      lastContactedAt: new Date('2027-01-15'),
+    });
+    expect(updated.lastContactedAt).toEqual(new Date('2027-01-15'));
+    const cleared = await updateMember(db, {
+      id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: null, discordHandle: null,
+      isActiveMember: true, membershipExpiresAt: null, contactNotes: null, canCreateEvents: true,
+      lastContactedAt: null,
+    });
+    expect(cleared.lastContactedAt).toBeNull();
+  });
+
   it('updateMember clears optional fields back to null', async () => {
     const expiresAt = new Date('2027-01-01T00:00:00Z');
     await updateMember(db, {
       id: 'viktor', name: 'Viktor Andersson', nickname: 'Vik', phoneNumber: '+46701234567', discordHandle: 'vik#1234',
       isActiveMember: true, membershipExpiresAt: expiresAt, contactNotes: 'Paid at the door', canCreateEvents: true,
+      lastContactedAt: null,
     });
     const cleared = await updateMember(db, {
       id: 'viktor', name: 'Viktor Andersson', nickname: null, phoneNumber: null, discordHandle: null,
       isActiveMember: true, membershipExpiresAt: null, contactNotes: null, canCreateEvents: true,
+      lastContactedAt: null,
     });
     expect(cleared.nickname).toBeNull();
     expect(cleared.phoneNumber).toBeNull();
@@ -52,6 +70,7 @@ describe('member service', () => {
       updateMember(db, {
         id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: '0701234567', discordHandle: null,
         isActiveMember: false, membershipExpiresAt: null, contactNotes: null, canCreateEvents: true,
+        lastContactedAt: null,
       }),
     ).rejects.toBeInstanceOf(InvalidPhoneError);
   });
@@ -61,6 +80,7 @@ describe('member service', () => {
       updateMember(db, {
         id: 'nobody', name: 'X', nickname: null, phoneNumber: null, discordHandle: null,
         isActiveMember: false, membershipExpiresAt: null, contactNotes: null, canCreateEvents: true,
+        lastContactedAt: null,
       }),
     ).rejects.toBeInstanceOf(UserNotFoundError);
   });
@@ -75,6 +95,7 @@ describe('member service', () => {
     await updateMember(db, {
       id: 'viktor', name: 'Viktor', nickname: null, phoneNumber: null, discordHandle: null,
       isActiveMember: true, membershipExpiresAt: future, contactNotes: null, canCreateEvents: true,
+      lastContactedAt: null,
     });
     const updated = await updateOwnProfile(db, { id: 'viktor', name: 'Vik', nickname: 'V', phoneNumber: '+46701234567', discordHandle: 'vik#1' });
     expect(updated).toMatchObject({ name: 'Vik', nickname: 'V', phoneNumber: '+46701234567', discordHandle: 'vik#1' });

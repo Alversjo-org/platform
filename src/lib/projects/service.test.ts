@@ -114,8 +114,9 @@ describe('listDraftEventsForUser', () => {
     await db.insert(schema.user).values([
       { id: 'u1', email: 'u1@example.org' },
       { id: 'u2', email: 'u2@example.org' },
-      { id: 'admin', email: 'admin@example.org', role: 'member-admin' },
+      { id: 'admin', email: 'admin@example.org' },
     ]);
+    await db.insert(schema.userRole).values({ userId: 'admin', role: 'member-admin' });
   });
 
   it('returns a draft the user organises, with details null when none exist yet', async () => {
