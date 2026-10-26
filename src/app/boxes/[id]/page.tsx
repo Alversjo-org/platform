@@ -6,10 +6,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { canAccessBox } from '@/lib/boxes/access';
+import { canAccessBox, listShareCandidates } from '@/lib/boxes/access';
 import { boxDeps } from '@/lib/boxes/deps';
 import { liveState, stateBadgeVariant } from '@/lib/boxes/live';
 import { boxOpenUrl } from '@/lib/boxes/urls';
@@ -17,6 +16,7 @@ import { hasAnyRole, requireUser } from '@/lib/session';
 import type { Box } from '@/db/schema';
 import type { FlyMachineState } from '@/lib/fly';
 import { destroyBoxAction, revokeBoxAction, shareBoxAction, startBoxAction, stopBoxAction } from '../actions';
+import { MemberPicker } from './member-picker';
 
 async function getLiveState(box: Box): Promise<FlyMachineState | 'unknown'> {
   try {
@@ -49,6 +49,7 @@ export default async function BoxPage({
     .innerJoin(schema.user, eq(schema.user.id, schema.boxAccess.userId))
     .where(eq(schema.boxAccess.boxId, id));
   const isAdmin = hasAnyRole(user, ['admin']);
+  const candidates = isAdmin ? await listShareCandidates(db, id) : [];
   const state = await getLiveState(box);
 
   return (
@@ -108,7 +109,8 @@ export default async function BoxPage({
                 <input type="hidden" name="id" value={box.id} />
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="email">Share with (must have logged in once)</Label>
-                  <Input id="email" name="email" type="email" required />
+                  {/* Keyed on the access list so a successful share clears the picked member. */}
+                  <MemberPicker key={members.map((m) => m.userId).join()} id="email" name="email" candidates={candidates} />
                 </div>
                 <Button type="submit" size="sm">Share</Button>
               </form>
