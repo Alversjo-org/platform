@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import {
-  createEvent, duplicateEvent, EventCreationBlockedError, getProjectBySlug, IncompleteEventError, InvalidTransitionError, transitionStatus,
+  createEvent, duplicateEvent, EventCreationBlockedError, getProjectBySlug, IncompleteEventError, InvalidTransitionError,
+  listDraftEventsForUser, transitionStatus,
 } from './service';
 
 async function draftEventWithDetailsAndArea(db: Db) {
@@ -103,5 +104,47 @@ describe('duplicateEvent', () => {
     const source = await createEvent(db, { title: 'X', summary: '', ownerUserId: 'u1' });
     await db.update(schema.user).set({ canCreateEvents: false }).where(eq(schema.user.id, 'u1'));
     await expect(duplicateEvent(db, { sourceProjectId: source.id, actorUserId: 'u1' })).rejects.toBeInstanceOf(EventCreationBlockedError);
+  });
+});
+
+describe('listDraftEventsForUser', () => {
+  let db: Db;
+  beforeEach(async () => {
+    db = await createDb('pglite://memory');
+    await db.insert(schema.user).values([
+      { id: 'u1', email: 'u1@example.org' },
+      { id: 'u2', email: 'u2@example.org' },
+      { id: 'admin', email: 'admin@example.org', role: 'member-admin' },
+    ]);
+  });
+
+  it('returns a draft the user organises, with details null when none exist yet', async () => {
+    const p = await createEvent(db, { title: 'No details yet', summary: '', ownerUserId: 'u1' });
+    const rows = await listDraftEventsForUser(db, 'u1');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].project).toMatchObject({ id: p.id, status: 'draft' });
+    expect(rows[0].details).toBeNull();
+  });
+
+  it('includes event_details when present', async () => {
+    const p = await draftEventWithDetailsAndArea(db);
+    const [row] = await listDraftEventsForUser(db, 'u1');
+    expect(row.details).toMatchObject({ projectId: p.id });
+  });
+
+  it("does not return another organiser's draft", async () => {
+    await createEvent(db, { title: 'u1 only', summary: '', ownerUserId: 'u1' });
+    expect(await listDraftEventsForUser(db, 'u2')).toEqual([]);
+  });
+
+  it('does not return a draft to a member-admin who is not an organiser on it', async () => {
+    await createEvent(db, { title: 'u1 only', summary: '', ownerUserId: 'u1' });
+    expect(await listDraftEventsForUser(db, 'admin')).toEqual([]);
+  });
+
+  it('excludes a published event', async () => {
+    const p = await draftEventWithDetailsAndArea(db);
+    await transitionStatus(db, { projectId: p.id, to: 'published', actorUserId: 'u1' });
+    expect(await listDraftEventsForUser(db, 'u1')).toEqual([]);
   });
 });

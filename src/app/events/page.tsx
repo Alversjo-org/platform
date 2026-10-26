@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
@@ -6,12 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getDb, schema } from '@/db';
 import type { EventDetails, Project } from '@/db/schema';
 import { getOrCreateIcalToken } from '@/lib/members/service';
+import { listDraftEventsForUser } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
 import { splitStockholmDateAndTime } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
-type EventRow = { project: Project; details: EventDetails };
+type EventRow = { project: Project; details: EventDetails | null };
 
 function formatEventWhen(date: Date): string {
   const { date: d, time } = splitStockholmDateAndTime(date);
@@ -26,7 +27,7 @@ function EventTable({ items }: { items: EventRow[] }) {
         {items.map(({ project, details }) => (
           <TableRow key={project.id}>
             <TableCell><Link href={`/events/${project.slug}`} className="underline">{project.title}</Link></TableCell>
-            <TableCell>{formatEventWhen(details.startsAt)}</TableCell>
+            <TableCell>{details ? formatEventWhen(details.startsAt) : '—'}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -42,16 +43,7 @@ export default async function EventsPage() {
     .from(schema.project)
     .innerJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
     .where(and(eq(schema.project.kind, 'event'), eq(schema.project.status, 'published')));
-  const draftRows = await db.select({ project: schema.project, details: schema.eventDetails })
-    .from(schema.project)
-    .innerJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
-    .innerJoin(schema.projectMember, eq(schema.projectMember.projectId, schema.project.id))
-    .where(and(
-      eq(schema.project.kind, 'event'),
-      eq(schema.project.status, 'draft'),
-      eq(schema.projectMember.userId, user.id),
-    ))
-    .orderBy(desc(schema.project.updatedAt));
+  const draftRows = await listDraftEventsForUser(db, user.id);
 
   const now = new Date();
   const upcoming = rows.filter((r) => r.details.startsAt >= now).sort((a, b) => a.details.startsAt.getTime() - b.details.startsAt.getTime());
