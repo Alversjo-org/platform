@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,11 +14,12 @@ import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
 import { listEventAreas } from '@/lib/areas/booking-service';
 import { getEventDetails } from '@/lib/events/details-service';
-import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
-import { getProjectBySlug } from '@/lib/projects/service';
+import { assertEventPermission, getEventRole, NotAuthorizedError } from '@/lib/projects/authorization';
+import { ALLOWED_TRANSITIONS, getProjectBySlug } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
 import { oreToSek } from '@/lib/money';
 import { splitStockholmDateAndTime, utcToStockholmWallClock } from '@/lib/timezone';
+import { archiveEventAction, cancelEventAction, closeEventAction, publishAction } from '../actions';
 import { bookAreaAction, removeAreaAction, updateEventDetailsAction, updateEventMetaAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +47,9 @@ export default async function EditEventPage({
     if (e instanceof NotAuthorizedError) redirect('/events');
     throw e;
   }
+  const role = await getEventRole(db, project.id, user);
+  const canManage = role === 'lead' || role === 'override';
+  const allowedNext = ALLOWED_TRANSITIONS[project.status];
   const details = await getEventDetails(db, project.id);
   const bookings = await listEventAreas(db, project.id);
   const areas = await listAreas(db);
@@ -53,9 +58,21 @@ export default async function EditEventPage({
 
   return (
     <AppShell user={user}>
-      <h1 className="mb-4 text-xl font-semibold">Edit: {project.title}</h1>
+      <div className="mb-4 flex items-center gap-2">
+        <h1 className="text-xl font-semibold">Edit: {project.title}</h1>
+        <Badge variant="secondary">{project.status}</Badge>
+      </div>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       {warning && <Alert className="mb-4"><AlertDescription>{warning}</AlertDescription></Alert>}
+
+      {canManage && (allowedNext.includes('published') || allowedNext.includes('cancelled') || allowedNext.includes('closed') || allowedNext.includes('archived')) && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {allowedNext.includes('published') && <form action={publishAction}><input type="hidden" name="slug" value={slug} /><Button type="submit" size="sm">Publish</Button></form>}
+          {allowedNext.includes('cancelled') && <form action={cancelEventAction}><input type="hidden" name="slug" value={slug} /><Button type="submit" size="sm" variant="secondary">Cancel event</Button></form>}
+          {allowedNext.includes('closed') && <form action={closeEventAction}><input type="hidden" name="slug" value={slug} /><Button type="submit" size="sm" variant="secondary">Close</Button></form>}
+          {allowedNext.includes('archived') && <form action={archiveEventAction}><input type="hidden" name="slug" value={slug} /><Button type="submit" size="sm" variant="secondary">Archive</Button></form>}
+        </div>
+      )}
 
       <Card className="mb-6">
         <CardHeader><CardTitle>Details</CardTitle></CardHeader>

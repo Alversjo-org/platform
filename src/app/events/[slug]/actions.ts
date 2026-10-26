@@ -82,6 +82,7 @@ async function transition(slug: string, to: ProjectStatus) {
     throw e;
   }
   revalidatePath(`/events/${slug}`);
+  revalidatePath('/events');
   redirect(`/events/${slug}`);
 }
 
