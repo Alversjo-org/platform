@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getDb } from '@/db';
 import type { Role } from '@/db/schema';
 import { listMembers } from '@/lib/members/service';
+import { ROLE_LABELS } from '@/lib/roles/labels';
 import { GRANTABLE_ROLES, groupRolesByUserId, listUserRoles } from '@/lib/roles/service';
 import { hasAnyRole, requireRoleAdmin } from '@/lib/session';
 import { setUserRoleAction } from './actions';
@@ -29,7 +30,7 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead><TableHead>Email</TableHead>
-            {GRANTABLE_ROLES.map((role) => <TableHead key={role}>{role}</TableHead>)}
+            {GRANTABLE_ROLES.map((role) => <TableHead key={role}>{ROLE_LABELS[role]}</TableHead>)}
           </TableRow>
         </TableHeader>
         <TableBody>
