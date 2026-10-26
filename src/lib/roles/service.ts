@@ -2,11 +2,10 @@ import { and, eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { Role, UserRole } from '@/db/schema';
 import { logDecision } from '@/lib/decision-log';
-import { GRANTABLE_ROLES } from '@/lib/roles/labels';
+import { ADMIN_ONLY_ROLES, GRANTABLE_ROLES } from '@/lib/roles/labels';
 import { hasAnyRole } from '@/lib/session';
 
-export { GRANTABLE_ROLES };
-const ADMIN_ONLY_ROLES: Role[] = ['admin', 'role-admin'];
+export { ADMIN_ONLY_ROLES, GRANTABLE_ROLES };
 
 export class NotAuthorizedError extends Error {
   constructor() { super('Only an admin can change this role'); this.name = 'NotAuthorizedError'; }

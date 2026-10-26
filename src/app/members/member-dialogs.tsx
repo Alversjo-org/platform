@@ -9,15 +9,22 @@ import { Dialog, DialogPopup, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { Role, User } from '@/db/schema';
+import type { Role } from '@/db/schema';
 import { setUserRoleAction } from '@/app/roles/actions';
-import { GRANTABLE_ROLES, ROLE_LABELS } from '@/lib/roles/labels';
+import { ADMIN_ONLY_ROLES, GRANTABLE_ROLES, ROLE_LABELS } from '@/lib/roles/labels';
 import { updateMemberAction } from './actions';
 
-const ADMIN_ONLY_ROLES: Role[] = ['admin', 'role-admin'];
+export type EditableMember = {
+  id: string; name: string; nickname: string | null; email: string; phoneNumber: string | null; discordHandle: string | null;
+  isActiveMember: boolean; canCreateEvents: boolean; membershipExpiresAt: Date | null; lastContactedAt: Date | null;
+  contactNotes: string | null;
+};
 
-export function MemberRowDialogs(props: {
-  member: User;
+/** Renders the edit card and (when canManageRoles) the roles dialog for a single member,
+ * resolved from the unfiltered member list so it works regardless of the list's active/
+ * inactive filter - see resolveDialogTarget. */
+export function MemberDialogs(props: {
+  member: EditableMember;
   memberRoles: Role[];
   canManageRoles: boolean;
   canChangeAdminRoles: boolean;
@@ -31,11 +38,6 @@ export function MemberRowDialogs(props: {
 
   return (
     <>
-      <Link href={`/members?edit=${member.id}`} className="underline">{member.name || member.nickname || '—'}</Link>
-      {canManageRoles && (
-        <Link href={`/members?roles=${member.id}`} className="ml-2 text-sm underline">Roles</Link>
-      )}
-
       <Dialog open={openEdit} onOpenChange={closeOnOutsideOrEscape}>
         <DialogPopup>
           <DialogTitle>{member.name || member.email}</DialogTitle>
@@ -69,13 +71,21 @@ export function MemberRowDialogs(props: {
         <Dialog open={openRoles} onOpenChange={closeOnOutsideOrEscape}>
           <DialogPopup>
             <DialogTitle>Roles for {member.name || member.email}</DialogTitle>
+            {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
             <div className="flex flex-wrap gap-2">
               {GRANTABLE_ROLES.map((role) => {
                 const held = memberRoles.includes(role);
                 if (ADMIN_ONLY_ROLES.includes(role) && !canChangeAdminRoles) {
                   return (
-                    <span key={role} className="rounded-full border border-dashed px-3 py-1 text-sm text-muted-foreground">
-                      {ROLE_LABELS[role]}
+                    <span
+                      key={role}
+                      className={
+                        held
+                          ? 'rounded-full border px-3 py-1 text-sm'
+                          : 'rounded-full border border-dashed px-3 py-1 text-sm text-muted-foreground'
+                      }
+                    >
+                      {held ? '✓ ' : ''}{ROLE_LABELS[role]}
                     </span>
                   );
                 }
@@ -84,7 +94,7 @@ export function MemberRowDialogs(props: {
                     <input type="hidden" name="userId" value={member.id} />
                     <input type="hidden" name="role" value={role} />
                     <input type="hidden" name="grant" value={held ? 'false' : 'true'} />
-                    <input type="hidden" name="returnTo" value={`/members?roles=${member.id}`} />
+                    <input type="hidden" name="returnTo" value={`/members?roles=${encodeURIComponent(member.id)}`} />
                     <Button type="submit" size="sm" variant={held ? 'default' : 'outline'} className="rounded-full">
                       {held ? '✓ ' : ''}{ROLE_LABELS[role]}
                     </Button>
