@@ -48,6 +48,8 @@ export default async function MembersPage({
   const status: Status = statusRaw === 'inactive' || statusRaw === 'all' ? statusRaw : 'active';
   const members = allMembers.filter((m) =>
     status === 'all' ? true : status === 'active' ? m.isActiveMember : !m.isActiveMember);
+  const activeCount = allMembers.filter((m) => m.isActiveMember).length;
+  const counts: Record<Status, number> = { active: activeCount, inactive: allMembers.length - activeCount, all: allMembers.length };
 
   // Resolved from the unfiltered list, not `members` - a dialog must stay reachable for a
   // member the current status tab doesn't happen to show (e.g. editing someone from Inactive).
@@ -73,7 +75,7 @@ export default async function MembersPage({
         {STATUS_TABS.map((tab) => (
           <Button key={tab.value} render={<Link href={`/members?status=${tab.value}`} />}
             variant={status === tab.value ? 'default' : 'outline'} size="sm">
-            {tab.label}
+            {tab.label} ({counts[tab.value]})
           </Button>
         ))}
       </div>
