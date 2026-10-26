@@ -17,13 +17,17 @@ export async function setUserRoleAction(formData: FormData) {
   const targetUserId = String(formData.get('userId'));
   const role = String(formData.get('role')) as Role;
   const grant = formData.get('grant') === 'true';
+  const requestedReturnTo = String(formData.get('returnTo') ?? '');
+  // Same-origin path only - formData is client-supplied, not a trusted redirect target.
+  const returnTo = requestedReturnTo.startsWith('/') && !requestedReturnTo.startsWith('//') ? requestedReturnTo : '/roles';
   try {
     await setUserRole(await getDb(), { actor, targetUserId, role, grant });
   } catch (e) {
     const message = knownMessage(e);
     if (message === undefined) throw e;
-    redirect(`/roles?error=${encodeURIComponent(message)}`);
+    redirect(`${returnTo}${returnTo.includes('?') ? '&' : '?'}error=${encodeURIComponent(message)}`);
   }
   revalidatePath('/roles');
-  redirect('/roles');
+  revalidatePath('/members');
+  redirect(returnTo);
 }

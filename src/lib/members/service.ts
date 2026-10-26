@@ -23,6 +23,7 @@ export async function updateMember(
   input: {
     id: string; name: string; nickname: string | null; phoneNumber: string | null; discordHandle: string | null;
     isActiveMember: boolean; membershipExpiresAt: Date | null; contactNotes: string | null; canCreateEvents: boolean;
+    lastContactedAt: Date | null;
   },
 ): Promise<User> {
   checkPhone(input.phoneNumber);
@@ -31,7 +32,7 @@ export async function updateMember(
     .set({
       name: input.name, nickname: input.nickname, phoneNumber: input.phoneNumber, discordHandle: input.discordHandle,
       isActiveMember: input.isActiveMember, membershipExpiresAt: input.membershipExpiresAt, contactNotes: input.contactNotes,
-      canCreateEvents: input.canCreateEvents,
+      canCreateEvents: input.canCreateEvents, lastContactedAt: input.lastContactedAt,
     })
     .where(eq(schema.user.id, input.id))
     .returning();
