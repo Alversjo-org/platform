@@ -6,12 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getDb, schema } from '@/db';
 import type { EventDetails, Project } from '@/db/schema';
 import { getOrCreateIcalToken } from '@/lib/members/service';
+import { listDraftEventsForUser } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
 import { splitStockholmDateAndTime } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
 
-type EventRow = { project: Project; details: EventDetails };
+type EventRow = { project: Project; details: EventDetails | null };
 
 function formatEventWhen(date: Date): string {
   const { date: d, time } = splitStockholmDateAndTime(date);
@@ -26,7 +27,7 @@ function EventTable({ items }: { items: EventRow[] }) {
         {items.map(({ project, details }) => (
           <TableRow key={project.id}>
             <TableCell><Link href={`/events/${project.slug}`} className="underline">{project.title}</Link></TableCell>
-            <TableCell>{formatEventWhen(details.startsAt)}</TableCell>
+            <TableCell>{details ? formatEventWhen(details.startsAt) : '—'}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -42,6 +43,7 @@ export default async function EventsPage() {
     .from(schema.project)
     .innerJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
     .where(and(eq(schema.project.kind, 'event'), eq(schema.project.status, 'published')));
+  const draftRows = await listDraftEventsForUser(db, user.id);
 
   const now = new Date();
   const upcoming = rows.filter((r) => r.details.startsAt >= now).sort((a, b) => a.details.startsAt.getTime() - b.details.startsAt.getTime());
@@ -56,6 +58,12 @@ export default async function EventsPage() {
           <Button render={<Link href="/events/new" />}>New event</Button>
         </div>
       </div>
+      {draftRows.length > 0 && (
+        <>
+          <h2 className="mb-2 text-lg font-medium">Your drafts</h2>
+          <EventTable items={draftRows} />
+        </>
+      )}
       <h2 className="mb-2 text-lg font-medium">Upcoming</h2>
       <EventTable items={upcoming} />
       <h2 className="mt-6 mb-2 text-lg font-medium">Past</h2>

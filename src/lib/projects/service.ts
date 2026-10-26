@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
-import type { Project, ProjectStatus } from '@/db/schema';
+import type { EventDetails, Project, ProjectStatus } from '@/db/schema';
 import { logDecision } from '@/lib/decision-log';
 import { slugify } from '@/lib/slug';
 
@@ -27,6 +27,19 @@ export async function getProject(db: Db, projectId: string): Promise<Project> {
 export async function getProjectBySlug(db: Db, slug: string): Promise<Project | null> {
   const [row] = await db.select().from(schema.project).where(eq(schema.project.slug, slug));
   return row ?? null;
+}
+
+export async function listDraftEventsForUser(db: Db, userId: string): Promise<{ project: Project; details: EventDetails | null }[]> {
+  return db.select({ project: schema.project, details: schema.eventDetails })
+    .from(schema.project)
+    .innerJoin(schema.projectMember, eq(schema.projectMember.projectId, schema.project.id))
+    .leftJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
+    .where(and(
+      eq(schema.project.kind, 'event'),
+      eq(schema.project.status, 'draft'),
+      eq(schema.projectMember.userId, userId),
+    ))
+    .orderBy(desc(schema.project.updatedAt));
 }
 
 async function uniqueSlug(db: Db, base: string): Promise<string> {
