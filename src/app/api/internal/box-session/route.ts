@@ -4,7 +4,7 @@ import { getAuth } from '@/lib/auth';
 import { canAccessBox } from '@/lib/boxes/access';
 import type { BoxSessionResult } from '@/lib/boxes/box-session';
 import { mintCloudCliToken } from '@/lib/boxes/cloudcli-token';
-import { roleFromRaw } from '@/lib/session';
+import { hasAnyRole, rolesFor } from '@/lib/session';
 
 /** Called only by server.ts over localhost. Resolves a box host + cookie into a proxy decision. */
 export async function POST(request: Request): Promise<Response> {
@@ -22,12 +22,12 @@ export async function POST(request: Request): Promise<Response> {
   const [box] = await db.select().from(schema.boxes).where(eq(schema.boxes.id, boxId));
   if (!box) return Response.json({ status: 'not_found' } satisfies BoxSessionResult);
 
-  const role = roleFromRaw((session.user as { role?: string }).role);
-  if (!(await canAccessBox(db, { id: session.user.id, role }, boxId))) {
+  const roles = await rolesFor(db, session.user.id);
+  if (!(await canAccessBox(db, { id: session.user.id, roles }, boxId))) {
     return Response.json({ status: 'forbidden' } satisfies BoxSessionResult);
   }
   if (!box.flyMachineId) return Response.json({ status: 'not_found' } satisfies BoxSessionResult);
   return Response.json({
-    status: 'ok', boxId, machineId: box.flyMachineId, token: mintCloudCliToken(box.jwtSecret), canStart: role === 'admin',
+    status: 'ok', boxId, machineId: box.flyMachineId, token: mintCloudCliToken(box.jwtSecret), canStart: hasAnyRole({ roles }, ['admin']),
   } satisfies BoxSessionResult);
 }

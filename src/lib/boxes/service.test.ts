@@ -32,7 +32,7 @@ describe('box service', () => {
   beforeEach(async () => {
     db = await createDb('pglite://memory');
     await db.insert(schema.user).values([
-      { id: 'admin', email: 'admin@example.org', role: 'admin' },
+      { id: 'admin', email: 'admin@example.org' },
       { id: 'viktor', email: 'viktor@example.org' },
     ]);
     const f = fakeFly();
@@ -46,17 +46,17 @@ describe('box service', () => {
     expect(box).toMatchObject({ id: 'abc123abc123', flyVolumeId: 'vol_box_abc123abc123', flyMachineId: 'm_box-abc123abc123', status: 'started', jwtSecret: 'jwt-secret' });
     expect(calls).toEqual(['createVolume box_abc123abc123', 'createMachine box-abc123abc123 contributor vol_box_abc123abc123']);
     expect(machineEnvs[0]).toMatchObject({ OWNER_EMAIL: 'admin@example.org' });
-    expect(await canAccessBox(db, { id: 'admin', role: 'admin' }, box.id)).toBe(true);
-    expect(await canAccessBox(db, { id: 'viktor', role: 'member' }, box.id)).toBe(false);
+    expect(await canAccessBox(db, { id: 'admin', roles: ['admin'] }, box.id)).toBe(true);
+    expect(await canAccessBox(db, { id: 'viktor', roles: [] }, box.id)).toBe(false);
   });
 
   it('share and revoke control member access; unknown email throws', async () => {
     const box = await createBox(deps, { name: 'T', profile: 'contributor', ownerUserId: 'admin' });
     await shareBox(deps, { boxId: box.id, email: 'Viktor@Example.org', grantedByUserId: 'admin' });
-    expect(await canAccessBox(db, { id: 'viktor', role: 'member' }, box.id)).toBe(true);
-    expect((await listBoxesFor(db, { id: 'viktor', role: 'member' })).map((b) => b.id)).toEqual([box.id]);
+    expect(await canAccessBox(db, { id: 'viktor', roles: [] }, box.id)).toBe(true);
+    expect((await listBoxesFor(db, { id: 'viktor', roles: [] })).map((b) => b.id)).toEqual([box.id]);
     await revokeBox(deps, { boxId: box.id, userId: 'viktor' });
-    expect(await canAccessBox(db, { id: 'viktor', role: 'member' }, box.id)).toBe(false);
+    expect(await canAccessBox(db, { id: 'viktor', roles: [] }, box.id)).toBe(false);
     await expect(shareBox(deps, { boxId: box.id, email: 'nobody@example.org', grantedByUserId: 'admin' })).rejects.toBeInstanceOf(UserNotFoundError);
   });
 
@@ -83,6 +83,6 @@ describe('box service', () => {
   it('the owner can never be revoked', async () => {
     const box = await createBox(deps, { name: 'T', profile: 'contributor', ownerUserId: 'admin' });
     await expect(revokeBox(deps, { boxId: box.id, userId: 'admin' })).rejects.toThrow('The owner always has access');
-    expect(await canAccessBox(db, { id: 'admin', role: 'admin' }, box.id)).toBe(true);
+    expect(await canAccessBox(db, { id: 'admin', roles: ['admin'] }, box.id)).toBe(true);
   });
 });

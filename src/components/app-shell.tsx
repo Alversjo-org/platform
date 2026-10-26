@@ -8,7 +8,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { isMemberAdmin, type SessionUser } from '@/lib/session';
+import { hasAnyRole, isMemberAdmin, type SessionUser } from '@/lib/session';
 
 export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const db = await getDb();
@@ -40,7 +40,11 @@ export async function AppShell({ user, children }: { user: SessionUser; children
                   <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </div>
-              {user.role !== 'member' && <div className="px-1.5 py-1"><Badge>{user.role}</Badge></div>}
+              {user.roles.length > 0 && (
+                <div className="flex flex-wrap gap-1 px-1.5 py-1">
+                  {user.roles.map((r) => <Badge key={r}>{r}</Badge>)}
+                </div>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href="/profile" />}>Edit profile</DropdownMenuItem>
             </DropdownMenuContent>
@@ -51,7 +55,8 @@ export async function AppShell({ user, children }: { user: SessionUser; children
           <Link href="/map" className="text-sm text-muted-foreground hover:text-foreground">Map</Link>
           <Link href="/boxes" className="text-sm text-muted-foreground hover:text-foreground">Boxes</Link>
           {isMemberAdmin(user) && <Link href="/members" className="text-sm text-muted-foreground hover:text-foreground">Members</Link>}
-          {isMemberAdmin(user) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
+          {hasAnyRole(user, ['admin', 'mapper']) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
+          {hasAnyRole(user, ['admin', 'role-admin']) && <Link href="/roles" className="text-sm text-muted-foreground hover:text-foreground">Roles</Link>}
         </nav>
       </header>
       <Separator className="my-4" />

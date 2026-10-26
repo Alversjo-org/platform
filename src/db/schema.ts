@@ -1,6 +1,6 @@
 import { boolean, index, integer, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 
-export type Role = 'member' | 'member-admin' | 'admin';
+export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin';
 export type BoxProfile = 'admin' | 'contributor';
 export type ProjectKind = 'event' | 'ongoing' | 'build' | 'purchase';
 export type ProjectStatus = 'draft' | 'published' | 'cancelled' | 'closed' | 'archived';
@@ -17,7 +17,6 @@ export const user = pgTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: boolean('email_verified').notNull().default(false),
   image: text('image'),
-  role: text('role', { enum: ['member', 'member-admin', 'admin'] }).$type<Role>().notNull().default('member'),
   phoneNumber: text('phone_number'),
   discordHandle: text('discord_handle'),
   isActiveMember: boolean('is_active_member').notNull().default(false),
@@ -90,6 +89,18 @@ export const boxAccess = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.boxId, t.userId] })],
+);
+
+export const userRole = pgTable(
+  'user_role',
+  {
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    role: text('role', { enum: ['admin', 'member-admin', 'mapper', 'role-admin'] }).$type<Role>().notNull(),
+    // Null for the one-time ADMIN_EMAILS bootstrap grant and the migration backfill, neither of which has a human granter.
+    grantedByUserId: text('granted_by_user_id').references(() => user.id),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.role] })],
 );
 
 export const renewalMessageSetting = pgTable('renewal_message_setting', {
@@ -179,6 +190,7 @@ export const decisionLog = pgTable('decision_log', {
 
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
+export type UserRole = typeof userRole.$inferSelect;
 export type RenewalMessageSetting = typeof renewalMessageSetting.$inferSelect;
 export type Project = typeof project.$inferSelect;
 export type ProjectMember = typeof projectMember.$inferSelect;

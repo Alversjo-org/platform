@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createDb } from '@/db';
+import { eq } from 'drizzle-orm';
+import { createDb, schema } from '@/db';
 import { buildAuth } from './auth';
 
 async function loginWithCode(auth: ReturnType<typeof buildAuth>, sent: string[], email: string) {
@@ -20,15 +21,12 @@ describe('auth', () => {
     const auth = buildAuth(db, { sendOtp: async ({ otp }) => void sent.push(otp) });
 
     const admin = await loginWithCode(auth, sent, 'admin@example.org');
-    // better-auth 1.7.5's static type for signInEmailOTP's response omits additionalFields
-    // (unlike its sibling endpoints, which return `user: {...} & Record<string, any>`);
-    // `role` is present at runtime (set by databaseHooks.user.create).
-    // @ts-expect-error -- role is an additionalField not in signInEmailOTP's declared return type
-    expect(admin.user.role).toBe('admin');
+    const [adminRole] = await db.select().from(schema.userRole).where(eq(schema.userRole.userId, admin.user.id));
+    expect(adminRole).toMatchObject({ role: 'admin', grantedByUserId: null });
 
     const member = await loginWithCode(auth, sent, 'someone@example.org');
-    // @ts-expect-error -- role is an additionalField not in signInEmailOTP's declared return type
-    expect(member.user.role).toBe('member');
+    const memberRoles = await db.select().from(schema.userRole).where(eq(schema.userRole.userId, member.user.id));
+    expect(memberRoles).toEqual([]);
     expect(sent).toHaveLength(2);
     expect(sent[0]).toMatch(/^\d{6}$/);
   });

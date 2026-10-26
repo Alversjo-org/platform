@@ -13,7 +13,7 @@ describe('member service', () => {
     db = await createDb('pglite://memory');
     await db.insert(schema.user).values([
       { id: 'viktor', email: 'viktor@example.org', name: 'Viktor' },
-      { id: 'admin', email: 'admin@example.org', name: 'Admin', role: 'admin' },
+      { id: 'admin', email: 'admin@example.org', name: 'Admin' },
     ]);
   });
 

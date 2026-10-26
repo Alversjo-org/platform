@@ -13,7 +13,7 @@ import { canAccessBox } from '@/lib/boxes/access';
 import { boxDeps } from '@/lib/boxes/deps';
 import { liveState, stateBadgeVariant } from '@/lib/boxes/live';
 import { boxOpenUrl } from '@/lib/boxes/urls';
-import { requireUser } from '@/lib/session';
+import { hasAnyRole, requireUser } from '@/lib/session';
 import type { Box } from '@/db/schema';
 import type { FlyMachineState } from '@/lib/fly';
 import { destroyBoxAction, revokeBoxAction, shareBoxAction, startBoxAction, stopBoxAction } from '../actions';
@@ -48,7 +48,7 @@ export default async function BoxPage({
     .from(schema.boxAccess)
     .innerJoin(schema.user, eq(schema.user.id, schema.boxAccess.userId))
     .where(eq(schema.boxAccess.boxId, id));
-  const isAdmin = user.role === 'admin';
+  const isAdmin = hasAnyRole(user, ['admin']);
   const state = await getLiveState(box);
 
   return (

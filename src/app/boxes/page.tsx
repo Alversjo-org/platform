@@ -8,7 +8,7 @@ import { listBoxesFor } from '@/lib/boxes/access';
 import { boxDeps } from '@/lib/boxes/deps';
 import { liveStates, stateBadgeVariant } from '@/lib/boxes/live';
 import { boxOpenUrl } from '@/lib/boxes/urls';
-import { requireUser } from '@/lib/session';
+import { hasAnyRole, requireUser } from '@/lib/session';
 import type { Box } from '@/db/schema';
 import type { FlyMachineState } from '@/lib/fly';
 
@@ -32,7 +32,7 @@ export default async function BoxesPage() {
     <AppShell user={user}>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Boxes</h1>
-        {user.role === 'admin' && <Button render={<Link href="/boxes/new" />}>New box</Button>}
+        {hasAnyRole(user, ['admin']) && <Button render={<Link href="/boxes/new" />}>New box</Button>}
       </div>
       {boxes.length === 0 ? (
         <p className="text-muted-foreground">No boxes shared with you yet.</p>

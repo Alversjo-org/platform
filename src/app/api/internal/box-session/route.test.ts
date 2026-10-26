@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createDb, schema, type Db } from '@/db';
 import { buildAuth, type Auth } from '@/lib/auth';
 
@@ -48,6 +49,14 @@ describe('POST /api/internal/box-session', () => {
     const body = await (await call({ host: 'abc123abc123.boxes.localhost', cookie })).json();
     expect(body).toMatchObject({ status: 'ok', boxId: 'abc123abc123', machineId: 'm1', canStart: true });
     expect(typeof body.token).toBe('string');
+  });
+
+  it('forbidden (not just "can\'t start") for a mapper on a box they are not explicitly shared on', async () => {
+    const cookie = await cookieFor('mapper@example.org');
+    const [u] = await db.select().from(schema.user).where(eq(schema.user.email, 'mapper@example.org'));
+    await db.insert(schema.userRole).values({ userId: u.id, role: 'mapper' });
+    await db.insert(schema.boxes).values({ id: 'abc123abc123', name: 'b', profile: 'admin', jwtSecret: 's', ownerUserId: u.id, flyMachineId: 'm1' });
+    expect(await (await call({ host: 'abc123abc123.boxes.localhost', cookie })).json()).toEqual({ status: 'forbidden' });
   });
 
   it('forbidden for a member without access, not_found for unknown box', async () => {

@@ -5,16 +5,16 @@ import { assertEventPermission, canViewEvent, getEventRole, NotAuthorizedError }
 
 describe('event authorization', () => {
   let db: Db;
-  const lead: SessionUser = { id: 'lead1', email: 'lead@example.org', role: 'member' };
-  const cocreator: SessionUser = { id: 'co1', email: 'co@example.org', role: 'member' };
-  const stranger: SessionUser = { id: 'stranger1', email: 'stranger@example.org', role: 'member' };
-  const admin: SessionUser = { id: 'admin1', email: 'admin@example.org', role: 'admin' };
+  const lead: SessionUser = { id: 'lead1', email: 'lead@example.org', roles: [] };
+  const cocreator: SessionUser = { id: 'co1', email: 'co@example.org', roles: [] };
+  const stranger: SessionUser = { id: 'stranger1', email: 'stranger@example.org', roles: [] };
+  const admin: SessionUser = { id: 'admin1', email: 'admin@example.org', roles: ['admin'] };
 
   beforeEach(async () => {
     db = await createDb('pglite://memory');
     await db.insert(schema.user).values([
       { id: 'lead1', email: 'lead@example.org' }, { id: 'co1', email: 'co@example.org' },
-      { id: 'stranger1', email: 'stranger@example.org' }, { id: 'admin1', email: 'admin@example.org', role: 'admin' },
+      { id: 'stranger1', email: 'stranger@example.org' }, { id: 'admin1', email: 'admin@example.org' },
     ]);
     await db.insert(schema.project).values({ id: 'p1', slug: 'p1', title: 'Test', kind: 'event', ownerUserId: 'lead1' });
     await db.insert(schema.projectMember).values([
