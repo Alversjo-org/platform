@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,16 @@ export default async function EventsPage() {
     .from(schema.project)
     .innerJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
     .where(and(eq(schema.project.kind, 'event'), eq(schema.project.status, 'published')));
+  const draftRows = await db.select({ project: schema.project, details: schema.eventDetails })
+    .from(schema.project)
+    .innerJoin(schema.eventDetails, eq(schema.eventDetails.projectId, schema.project.id))
+    .innerJoin(schema.projectMember, eq(schema.projectMember.projectId, schema.project.id))
+    .where(and(
+      eq(schema.project.kind, 'event'),
+      eq(schema.project.status, 'draft'),
+      eq(schema.projectMember.userId, user.id),
+    ))
+    .orderBy(desc(schema.project.updatedAt));
 
   const now = new Date();
   const upcoming = rows.filter((r) => r.details.startsAt >= now).sort((a, b) => a.details.startsAt.getTime() - b.details.startsAt.getTime());
@@ -56,6 +66,12 @@ export default async function EventsPage() {
           <Button render={<Link href="/events/new" />}>New event</Button>
         </div>
       </div>
+      {draftRows.length > 0 && (
+        <>
+          <h2 className="mb-2 text-lg font-medium">Your drafts</h2>
+          <EventTable items={draftRows} />
+        </>
+      )}
       <h2 className="mb-2 text-lg font-medium">Upcoming</h2>
       <EventTable items={upcoming} />
       <h2 className="mt-6 mb-2 text-lg font-medium">Past</h2>
