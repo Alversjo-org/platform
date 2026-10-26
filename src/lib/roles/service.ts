@@ -2,9 +2,10 @@ import { and, eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { Role, UserRole } from '@/db/schema';
 import { logDecision } from '@/lib/decision-log';
+import { GRANTABLE_ROLES } from '@/lib/roles/labels';
 import { hasAnyRole } from '@/lib/session';
 
-export const GRANTABLE_ROLES: Role[] = ['member-admin', 'mapper', 'role-admin', 'admin'];
+export { GRANTABLE_ROLES };
 const ADMIN_ONLY_ROLES: Role[] = ['admin', 'role-admin'];
 
 export class NotAuthorizedError extends Error {
