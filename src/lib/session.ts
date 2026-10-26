@@ -16,8 +16,13 @@ export function hasAnyRole(user: { roles: Role[] }, roles: Role[]): boolean {
   return roles.some((r) => user.roles.includes(r));
 }
 
+export const ADMIN_ROLES: Role[] = ['admin'];
+export const MEMBER_ADMIN_ROLES: Role[] = ['admin', 'member-admin'];
+export const MAPPER_ROLES: Role[] = ['admin', 'mapper'];
+export const ROLE_ADMIN_ROLES: Role[] = ['admin', 'role-admin'];
+
 export function isMemberAdmin(user: { roles: Role[] }): boolean {
-  return hasAnyRole(user, ['admin', 'member-admin']);
+  return hasAnyRole(user, MEMBER_ADMIN_ROLES);
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -42,7 +47,7 @@ export async function requireAnyRole(roles: Role[]): Promise<SessionUser> {
   return u;
 }
 
-export const requireAdmin = () => requireAnyRole(['admin']);
-export const requireMemberAdmin = () => requireAnyRole(['admin', 'member-admin']);
-export const requireMapper = () => requireAnyRole(['admin', 'mapper']);
-export const requireRoleAdmin = () => requireAnyRole(['admin', 'role-admin']);
+export const requireAdmin = () => requireAnyRole(ADMIN_ROLES);
+export const requireMemberAdmin = () => requireAnyRole(MEMBER_ADMIN_ROLES);
+export const requireMapper = () => requireAnyRole(MAPPER_ROLES);
+export const requireRoleAdmin = () => requireAnyRole(ROLE_ADMIN_ROLES);

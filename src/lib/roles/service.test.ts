@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDb, schema, type Db } from '@/db';
-import { groupRolesByUserId, NotAuthorizedError, setUserRole } from './service';
+import { groupRolesByUserId, NotAuthorizedError, setUserRole, UnknownRoleError } from './service';
 
 describe('setUserRole', () => {
   let db: Db;
@@ -73,6 +73,20 @@ describe('setUserRole', () => {
     await setUserRole(db, { actor: { id: 'actor', roles: ['admin'] }, targetUserId: 'target', role: 'mapper', grant: false });
     const logs = await db.select().from(schema.decisionLog).where(eq(schema.decisionLog.entityId, 'target'));
     expect(logs.map((l) => l.action)).toEqual(['grant', 'revoke']);
+  });
+
+  it('rejects an actor with no role-admin or admin role, even for a grantable (non-admin-only) role', async () => {
+    await expect(
+      setUserRole(db, { actor: { id: 'actor', roles: [] }, targetUserId: 'target', role: 'mapper', grant: true }),
+    ).rejects.toThrow(NotAuthorizedError);
+    expect(await db.select().from(schema.userRole).where(eq(schema.userRole.userId, 'target'))).toEqual([]);
+  });
+
+  it('rejects an unrecognized role string, even from an admin actor', async () => {
+    await expect(
+      setUserRole(db, { actor: { id: 'actor', roles: ['admin'] }, targetUserId: 'target', role: 'bogus-role' as never, grant: true }),
+    ).rejects.toThrow(UnknownRoleError);
+    expect(await db.select().from(schema.userRole).where(eq(schema.userRole.userId, 'target'))).toEqual([]);
   });
 });
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
-import { hasAnyRole, isMemberAdmin, rolesFor } from './session';
+import {
+  ADMIN_ROLES, hasAnyRole, isMemberAdmin, MAPPER_ROLES, MEMBER_ADMIN_ROLES, ROLE_ADMIN_ROLES, rolesFor,
+} from './session';
 
 describe('hasAnyRole', () => {
   it('is true when the user holds any of the listed roles', () => {
@@ -20,6 +22,33 @@ describe('isMemberAdmin', () => {
     expect(isMemberAdmin({ roles: ['member-admin'] })).toBe(true);
     expect(isMemberAdmin({ roles: ['mapper'] })).toBe(false);
     expect(isMemberAdmin({ roles: [] })).toBe(false);
+  });
+});
+
+describe('named-wrapper role lists', () => {
+  it('each wrapper admits exactly the roles it is supposed to, and nothing else', () => {
+    expect(ADMIN_ROLES).toEqual(['admin']);
+    expect(MEMBER_ADMIN_ROLES).toEqual(['admin', 'member-admin']);
+    expect(MAPPER_ROLES).toEqual(['admin', 'mapper']);
+    expect(ROLE_ADMIN_ROLES).toEqual(['admin', 'role-admin']);
+  });
+
+  it('a member-admin-only user does not satisfy the mapper gate', () => {
+    expect(hasAnyRole({ roles: ['member-admin'] }, MAPPER_ROLES)).toBe(false);
+  });
+
+  it('a mapper-only user does not satisfy the member-admin gate', () => {
+    expect(hasAnyRole({ roles: ['mapper'] }, MEMBER_ADMIN_ROLES)).toBe(false);
+  });
+
+  it('a mapper-only user satisfies the mapper gate', () => {
+    expect(hasAnyRole({ roles: ['mapper'] }, MAPPER_ROLES)).toBe(true);
+  });
+
+  it('admin alone satisfies every gate', () => {
+    for (const roles of [ADMIN_ROLES, MEMBER_ADMIN_ROLES, MAPPER_ROLES, ROLE_ADMIN_ROLES]) {
+      expect(hasAnyRole({ roles: ['admin'] }, roles)).toBe(true);
+    }
   });
 });
 
