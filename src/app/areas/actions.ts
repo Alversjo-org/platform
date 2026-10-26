@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/db';
 import { createArea, updateArea } from '@/lib/areas/service';
-import { requireMemberAdmin } from '@/lib/session';
+import { requireMapper } from '@/lib/session';
 
 function parseAreaInput(formData: FormData) {
   const capacityRaw = String(formData.get('capacity') ?? '').trim();
@@ -17,14 +17,14 @@ function parseAreaInput(formData: FormData) {
 }
 
 export async function createAreaAction(formData: FormData) {
-  await requireMemberAdmin();
+  await requireMapper();
   await createArea(await getDb(), parseAreaInput(formData));
   revalidatePath('/areas');
   redirect('/areas');
 }
 
 export async function updateAreaAction(formData: FormData) {
-  await requireMemberAdmin();
+  await requireMapper();
   const id = String(formData.get('id'));
   await updateArea(await getDb(), { id, ...parseAreaInput(formData) });
   revalidatePath('/areas');

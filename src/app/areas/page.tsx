@@ -8,13 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
-import { requireMemberAdmin } from '@/lib/session';
+import { requireMapper } from '@/lib/session';
 import { createAreaAction, updateAreaAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AreasPage() {
-  const admin = await requireMemberAdmin();
+  const admin = await requireMapper();
   const areas = await listAreas(await getDb());
   return (
     <AppShell user={admin}>
