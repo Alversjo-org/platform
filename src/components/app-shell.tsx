@@ -8,6 +8,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { ROLE_LABELS } from '@/lib/roles/labels';
 import { hasAnyRole, isMemberAdmin, type SessionUser } from '@/lib/session';
 
 export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
@@ -42,7 +43,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
               </div>
               {user.roles.length > 0 && (
                 <div className="flex flex-wrap gap-1 px-1.5 py-1">
-                  {user.roles.map((r) => <Badge key={r}>{r}</Badge>)}
+                  {user.roles.map((r) => <Badge key={r}>{ROLE_LABELS[r]}</Badge>)}
                 </div>
               )}
               <DropdownMenuSeparator />

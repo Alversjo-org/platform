@@ -20,6 +20,7 @@ export async function updateMemberAction(formData: FormData) {
   const id = String(formData.get('id'));
   const expiresRaw = String(formData.get('membershipExpiresAt') ?? '').trim();
   const phoneRaw = String(formData.get('phoneNumber') ?? '').trim();
+  const lastContactedRaw = String(formData.get('lastContactedAt') ?? '').trim();
 
   let errorRedirect: string | undefined;
   try {
@@ -33,11 +34,12 @@ export async function updateMemberAction(formData: FormData) {
       membershipExpiresAt: expiresRaw === '' ? null : new Date(expiresRaw),
       contactNotes: String(formData.get('contactNotes') ?? '').trim() || null,
       canCreateEvents: formData.get('canCreateEvents') !== null,
+      lastContactedAt: lastContactedRaw === '' ? null : new Date(lastContactedRaw),
     });
   } catch (e) {
     const message = knownMessage(e);
     if (message === undefined) throw e;
-    errorRedirect = `/members/${id}?error=${encodeURIComponent(message)}`;
+    errorRedirect = `/members?edit=${id}&error=${encodeURIComponent(message)}`;
   }
   if (errorRedirect) redirect(errorRedirect);
   revalidatePath('/members');
