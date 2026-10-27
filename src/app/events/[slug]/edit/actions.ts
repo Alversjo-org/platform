@@ -3,13 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { getDb } from '@/db';
-import { InvalidCapacityError, upsertEventDetails } from '@/lib/events/details-service';
+import { getEventDetails, InvalidCapacityError, upsertEventDetails } from '@/lib/events/details-service';
 import { parseEventDetailsForm } from '@/lib/events/parse-details-form';
-import { bookEventArea, removeEventArea } from '@/lib/areas/booking-service';
+import { bookEventAreas, removeEventArea } from '@/lib/areas/booking-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
 import { getProjectBySlug, updateProjectMeta } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
-import { stockholmWallClockToUtc } from '@/lib/timezone';
 
 async function loadEditableProject(slug: string) {
   const user = await requireUser();
@@ -51,19 +50,16 @@ export async function updateEventDetailsAction(formData: FormData) {
   redirect(`/events/${slug}/edit`);
 }
 
-export async function bookAreaAction(formData: FormData) {
+export async function bookAreasAction(formData: FormData) {
   const slug = String(formData.get('slug'));
   const { db, project } = await loadEditableProject(slug);
-  const { overlaps } = await bookEventArea(db, {
-    eventProjectId: project.id,
-    areaId: String(formData.get('areaId')),
-    from: stockholmWallClockToUtc(String(formData.get('from'))),
-    to: stockholmWallClockToUtc(String(formData.get('to'))),
-    setupNote: String(formData.get('setupNote') ?? '').trim() || null,
-  });
+  const details = await getEventDetails(db, project.id);
+  if (!details) redirect(`/events/${slug}/edit?error=${encodeURIComponent('Save the event details before booking areas.')}`);
+  const areaIds = formData.getAll('areaIds').map(String);
+  const { overlaps } = await bookEventAreas(db, { eventProjectId: project.id, areaIds, from: details.startsAt, to: details.endsAt });
   revalidatePath(`/events/${slug}/edit`);
   if (overlaps.length > 0) {
-    const names = overlaps.map((o) => o.eventTitle).join(', ');
+    const names = [...new Set(overlaps.map((o) => o.eventTitle))].join(', ');
     redirect(`/events/${slug}/edit?warning=${encodeURIComponent(`Also booked by: ${names}`)}`);
   }
   redirect(`/events/${slug}/edit`);

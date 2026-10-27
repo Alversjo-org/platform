@@ -9,7 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { AddSectionToggle } from '@/components/events/add-section-toggle';
+import { AreaCheckboxes } from '@/components/events/area-checkboxes';
 import { CapacityFieldset } from '@/components/events/capacity-fieldset';
+import { DateRangeFields } from '@/components/events/date-range-fields';
 import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
 import { listEventAreas } from '@/lib/areas/booking-service';
@@ -20,7 +23,7 @@ import { requireUser } from '@/lib/session';
 import { oreToSek } from '@/lib/money';
 import { splitStockholmDateAndTime, utcToStockholmWallClock } from '@/lib/timezone';
 import { archiveEventAction, cancelEventAction, closeEventAction, publishAction } from '../actions';
-import { bookAreaAction, removeAreaAction, updateEventDetailsAction, updateEventMetaAction } from './actions';
+import { bookAreasAction, removeAreaAction, updateEventDetailsAction, updateEventMetaAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,22 +95,20 @@ export default async function EditEventPage({
         <CardContent>
           <form action={updateEventDetailsAction} className="space-y-4">
             <input type="hidden" name="slug" value={slug} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="startsDate">Starts (Europe/Stockholm)</Label><Input id="startsDate" name="startsDate" type="date" defaultValue={starts.date} required /></div>
-              <div className="space-y-2"><Label htmlFor="endsDate">Ends (Europe/Stockholm)</Label><Input id="endsDate" name="endsDate" type="date" defaultValue={ends.date} required /></div>
-            </div>
-            <details open={!!(starts.time || ends.time)}>
-              <summary className="cursor-pointer text-sm underline">+ Add a specific time (optional — defaults to all day)</summary>
-              <div className="mt-2 grid gap-4 sm:grid-cols-2">
+            <DateRangeFields defaultStartsDate={starts.date} defaultEndsDate={ends.date} />
+            <AddSectionToggle label="+ Add time" defaultOpen={!!(starts.time || ends.time)}>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2"><Label htmlFor="startsTime">Starts at</Label><Input id="startsTime" name="startsTime" type="time" defaultValue={starts.time ?? ''} /></div>
                 <div className="space-y-2"><Label htmlFor="endsTime">Ends at</Label><Input id="endsTime" name="endsTime" type="time" defaultValue={ends.time ?? ''} /></div>
               </div>
-            </details>
+            </AddSectionToggle>
             <CapacityFieldset defaultHasLimit={details?.hasCapacityLimit ?? true} defaultCapacity={details?.capacity ?? ''} />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="signupOpensAt">Sign-up opens (Europe/Stockholm)</Label><Input id="signupOpensAt" name="signupOpensAt" type="datetime-local" defaultValue={toLocalInput(details?.signupOpensAt)} /></div>
-              <div className="space-y-2"><Label htmlFor="signupClosesAt">Sign-up closes (Europe/Stockholm)</Label><Input id="signupClosesAt" name="signupClosesAt" type="datetime-local" defaultValue={toLocalInput(details?.signupClosesAt)} /></div>
-            </div>
+            <AddSectionToggle label="+ Add Sign-up window" defaultOpen={!!(details?.signupOpensAt || details?.signupClosesAt)}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label htmlFor="signupOpensAt">Sign-up opens (Europe/Stockholm)</Label><Input id="signupOpensAt" name="signupOpensAt" type="datetime-local" defaultValue={toLocalInput(details?.signupOpensAt)} /></div>
+                <div className="space-y-2"><Label htmlFor="signupClosesAt">Sign-up closes (Europe/Stockholm)</Label><Input id="signupClosesAt" name="signupClosesAt" type="datetime-local" defaultValue={toLocalInput(details?.signupClosesAt)} /></div>
+              </div>
+            </AddSectionToggle>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="priceKr">Price (SEK, 0 = free)</Label><Input id="priceKr" name="priceKr" type="number" min={0} step="0.01" defaultValue={details ? oreToSek(details.priceSek) : 0} /></div>
               <div className="space-y-2"><Label htmlFor="priceNote">Price note</Label><Input id="priceNote" name="priceNote" defaultValue={details?.priceNote ?? ''} /></div>
@@ -124,44 +125,35 @@ export default async function EditEventPage({
 
       <Card>
         <CardHeader><CardTitle>Areas</CardTitle></CardHeader>
-        <CardContent>
-          <details open={bookings.length > 0}>
-            <summary className="cursor-pointer text-sm underline">+ Areas (optional — not required to publish)</summary>
-            <div className="mt-4">
-              <Table className="mb-4">
-                <TableHeader><TableRow><TableHead>Area</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead /></TableRow></TableHeader>
-                <TableBody>
-                  {bookings.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell>{areas.find((a) => a.id === b.areaId)?.name ?? b.areaId}</TableCell>
-                      <TableCell>{toLocalInput(b.from)}</TableCell>
-                      <TableCell>{toLocalInput(b.to)}</TableCell>
-                      <TableCell className="text-right">
-                        <form action={removeAreaAction}>
-                          <input type="hidden" name="slug" value={slug} />
-                          <input type="hidden" name="eventAreaId" value={b.id} />
-                          <button type="submit" className="text-sm underline">Remove</button>
-                        </form>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <form action={bookAreaAction} className="grid gap-4 sm:grid-cols-2">
-                <input type="hidden" name="slug" value={slug} />
-                <div className="space-y-2">
-                  <Label htmlFor="areaId">Area</Label>
-                  <select id="areaId" name="areaId" className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" required>
-                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2"><Label htmlFor="setupNote">Setup note</Label><Input id="setupNote" name="setupNote" /></div>
-                <div className="space-y-2"><Label htmlFor="from">From (Europe/Stockholm)</Label><Input id="from" name="from" type="datetime-local" required /></div>
-                <div className="space-y-2"><Label htmlFor="to">To (Europe/Stockholm)</Label><Input id="to" name="to" type="datetime-local" required /></div>
-                <Button type="submit" className="sm:col-span-2">Book area</Button>
-              </form>
-            </div>
-          </details>
+        <CardContent className="space-y-4">
+          {bookings.length > 0 && (
+            <Table>
+              <TableHeader><TableRow><TableHead>Area</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead /></TableRow></TableHeader>
+              <TableBody>
+                {bookings.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell>{areas.find((a) => a.id === b.areaId)?.name ?? b.areaId}</TableCell>
+                    <TableCell>{toLocalInput(b.from)}</TableCell>
+                    <TableCell>{toLocalInput(b.to)}</TableCell>
+                    <TableCell className="text-right">
+                      <form action={removeAreaAction}>
+                        <input type="hidden" name="slug" value={slug} />
+                        <input type="hidden" name="eventAreaId" value={b.id} />
+                        <button type="submit" className="text-sm underline">Remove</button>
+                      </form>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <AddSectionToggle label="+ Add area" defaultOpen={false}>
+            <form action={bookAreasAction} className="space-y-4">
+              <input type="hidden" name="slug" value={slug} />
+              <AreaCheckboxes areas={areas.filter((a) => !bookings.some((b) => b.areaId === a.id))} />
+              <Button type="submit">Book areas</Button>
+            </form>
+          </AddSectionToggle>
         </CardContent>
       </Card>
     </AppShell>
