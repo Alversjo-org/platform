@@ -36,7 +36,6 @@ export default function LoginPage() {
     setBusy(false);
     if (error) return setError(error.message ?? 'Wrong or expired code');
     router.push('/');
-    router.refresh();
   }
 
   return (
