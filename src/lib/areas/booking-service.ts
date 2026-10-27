@@ -26,6 +26,23 @@ export async function bookEventArea(
   return { booking, overlaps };
 }
 
+/** Books several areas at once for the same time span (e.g. the event's own start/end), with no per-area setup note. */
+export async function bookEventAreas(
+  db: Db,
+  input: { eventProjectId: string; areaIds: string[]; from: Date; to: Date },
+): Promise<{ bookings: EventArea[]; overlaps: AreaOverlapWarning[] }> {
+  return db.transaction(async (tx) => {
+    const bookings: EventArea[] = [];
+    const overlaps: AreaOverlapWarning[] = [];
+    for (const areaId of input.areaIds) {
+      const result = await bookEventArea(tx, { eventProjectId: input.eventProjectId, areaId, from: input.from, to: input.to, setupNote: null });
+      bookings.push(result.booking);
+      overlaps.push(...result.overlaps);
+    }
+    return { bookings, overlaps };
+  });
+}
+
 export function listEventAreas(db: Db, eventProjectId: string): Promise<EventArea[]> {
   return db.select().from(schema.eventArea).where(eq(schema.eventArea.eventProjectId, eventProjectId));
 }

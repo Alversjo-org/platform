@@ -1,10 +1,13 @@
 import { and, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { EventsCalendar } from '@/components/events/events-calendar';
 import { getDb, schema } from '@/db';
 import type { EventDetails, Project } from '@/db/schema';
+import { toCalendarEvents } from '@/lib/events/calendar-view';
 import { getOrCreateIcalToken } from '@/lib/members/service';
 import { listDraftEventsForUser } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
@@ -54,7 +57,15 @@ export default async function EventsPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Events</h1>
         <div className="flex gap-4">
-          <a href={`/events/members.ics?token=${icalToken}`} className="text-sm underline">Subscribe to all events</a>
+          <Tooltip>
+            <TooltipTrigger
+              className={buttonVariants({ variant: 'outline' })}
+              render={<a href={`/events/members.ics?token=${icalToken}`} />}
+            >
+              Subscribe to all events
+            </TooltipTrigger>
+            <TooltipContent>Adds every published event to your calendar app, kept up to date automatically.</TooltipContent>
+          </Tooltip>
           <Button render={<Link href="/events/new" />}>New event</Button>
         </div>
       </div>
@@ -68,6 +79,8 @@ export default async function EventsPage() {
       <EventTable items={upcoming} />
       <h2 className="mt-6 mb-2 text-lg font-medium">Past</h2>
       <EventTable items={past} />
+      <h2 className="mt-6 mb-2 text-lg font-medium">Calendar</h2>
+      <EventsCalendar events={toCalendarEvents(rows)} />
     </AppShell>
   );
 }
