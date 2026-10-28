@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { FortnoxClient } from './client';
-import { completeConnect, disconnect, getConnection, getValidAccessToken, NeedsReauthError } from './connection-service';
+import { completeConnect, disconnect, getConnection, getValidAccessToken, markNeedsReauth, NeedsReauthError } from './connection-service';
 
 async function seedUser(db: Db, id: string): Promise<void> {
   await db.insert(schema.user).values({ id, email: `${id}@example.org` });
@@ -78,6 +78,15 @@ describe('connection-service', () => {
     const conn = await getConnection(db);
     expect(conn).toMatchObject({ status: 'needs_reauth', accessToken: 'at1', refreshToken: 'rt1' });
     expect(conn?.lastRefreshError).toMatch(/invalid_grant/);
+  });
+
+  it('markNeedsReauth flips a connected connection to needs_reauth with a recorded reason', async () => {
+    db = await createDb('pglite://memory');
+    await seedUser(db, 'u1');
+    await completeConnect(db, fakeClient(), { code: 'abc', userId: 'u1' });
+    await markNeedsReauth(db, 'Fortnox returned 401 mid-sync');
+    const conn = await getConnection(db);
+    expect(conn).toMatchObject({ status: 'needs_reauth', lastRefreshError: 'Fortnox returned 401 mid-sync' });
   });
 
   it('disconnect sets status to disconnected', async () => {

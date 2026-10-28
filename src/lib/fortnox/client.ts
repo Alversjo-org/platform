@@ -1,5 +1,12 @@
 import { createRateLimiter } from './rate-limiter';
 
+export class FortnoxApiError extends Error {
+  constructor(public readonly status: number, public readonly path: string, body: string) {
+    super(`Fortnox API ${path} returned ${status}: ${body}`);
+    this.name = 'FortnoxApiError';
+  }
+}
+
 export type FortnoxTokens = { accessToken: string; refreshToken: string; expiresAt: Date; scope: string };
 export type FxFinancialYearData = { fortnoxId: number; fromDate: string; toDate: string; lockedUntilDate: string | null };
 export type FxAccountData = { year: number; number: number; name: string; active: boolean };
@@ -58,7 +65,23 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
       ...init,
       headers: { ...init.headers, Authorization: `Bearer ${accessToken}` },
     });
+    if (!res.ok) throw new FortnoxApiError(res.status, path, await res.text());
     return res.json();
+  }
+
+  /** Pages through a list endpoint until `MetaInformation['@TotalPages']` is reached. */
+  async function fetchAllPages<T>(basePath: string, accessToken: string, extractItems: (data: unknown) => T[]): Promise<T[]> {
+    const items: T[] = [];
+    const separator = basePath.includes('?') ? '&' : '?';
+    let page = 1;
+    for (;;) {
+      const data = await fetchJson(`${basePath}${separator}page=${page}`, accessToken);
+      items.push(...extractItems(data));
+      const totalPages = (data as { MetaInformation?: { '@TotalPages'?: number } }).MetaInformation?.['@TotalPages'] ?? 1;
+      if (page >= totalPages) break;
+      page++;
+    }
+    return items;
   }
 
   async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
@@ -106,38 +129,37 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
 
     async getFinancialYears(accessToken) {
       const data = (await fetchJson('/financialyears', accessToken)) as { FinancialYears: { Id: number; FromDate: string; ToDate: string }[] };
+      // lockedUntilDate is a placeholder: /settings/lockedperiod (scope already requested) is not
+      // called this slice. Nothing reads this column yet — don't rely on it until it's populated.
       return data.FinancialYears.map((y) => ({ fortnoxId: y.Id, fromDate: y.FromDate, toDate: y.ToDate, lockedUntilDate: null }));
     },
 
     async getAccounts(accessToken, year) {
-      const data = (await fetchJson(`/accounts?financialyear=${year}`, accessToken)) as { Accounts: { Number: number; Description: string; Active: boolean }[] };
-      return data.Accounts.map((a) => ({ year, number: a.Number, name: a.Description, active: a.Active }));
+      const rows = await fetchAllPages<{ Number: number; Description: string; Active: boolean }>(
+        `/accounts?financialyear=${year}`, accessToken, (data) => (data as { Accounts: { Number: number; Description: string; Active: boolean }[] }).Accounts,
+      );
+      return rows.map((a) => ({ year, number: a.Number, name: a.Description, active: a.Active }));
     },
 
     async getCostCentres(accessToken) {
-      const data = (await fetchJson('/costcenters', accessToken)) as { CostCenters: { Code: string; Description: string; Active: boolean }[] };
-      return data.CostCenters.map((c) => ({ code: c.Code, name: c.Description, active: c.Active }));
+      const rows = await fetchAllPages<{ Code: string; Description: string; Active: boolean }>(
+        '/costcenters', accessToken, (data) => (data as { CostCenters: { Code: string; Description: string; Active: boolean }[] }).CostCenters,
+      );
+      return rows.map((c) => ({ code: c.Code, name: c.Description, active: c.Active }));
     },
 
     async getFxProjects(accessToken) {
-      const data = (await fetchJson('/projects', accessToken)) as { Projects: { ProjectNumber: string; Description: string; Status: string }[] };
-      return data.Projects.map((p) => ({ code: p.ProjectNumber, name: p.Description, active: p.Status !== 'Completed' }));
+      const rows = await fetchAllPages<{ ProjectNumber: string; Description: string; Status: string }>(
+        '/projects', accessToken, (data) => (data as { Projects: { ProjectNumber: string; Description: string; Status: string }[] }).Projects,
+      );
+      return rows.map((p) => ({ code: p.ProjectNumber, name: p.Description, active: p.Status !== 'Completed' }));
     },
 
     async listVoucherKeys(accessToken, financialYear) {
-      const keys: { series: string; number: number }[] = [];
-      let page = 1;
-      for (;;) {
-        const data = (await fetchJson(`/vouchers?financialyear=${financialYear}&page=${page}`, accessToken)) as {
-          Vouchers: { VoucherSeries: string; VoucherNumber: number }[];
-          MetaInformation?: { '@TotalPages'?: number };
-        };
-        keys.push(...data.Vouchers.map((v) => ({ series: v.VoucherSeries, number: v.VoucherNumber })));
-        const totalPages = data.MetaInformation?.['@TotalPages'] ?? 1;
-        if (page >= totalPages) break;
-        page++;
-      }
-      return keys;
+      const rows = await fetchAllPages<{ VoucherSeries: string; VoucherNumber: number }>(
+        `/vouchers?financialyear=${financialYear}`, accessToken, (data) => (data as { Vouchers: { VoucherSeries: string; VoucherNumber: number }[] }).Vouchers,
+      );
+      return rows.map((v) => ({ series: v.VoucherSeries, number: v.VoucherNumber }));
     },
 
     async getVoucher(accessToken, financialYear, series, number) {
@@ -158,6 +180,9 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
         referenceType: v.ReferenceType,
         referenceNumber: v.ReferenceNumber,
         comments: v.Comments,
+        // Placeholder: knowing whether a voucher has a file needs /voucherfileconnections, a
+        // separate call this slice doesn't make (that's the receipts slice). Don't rely on this
+        // until it's populated — a future "missing receipts" view must not read it as-is.
         hasAttachment: false,
         rows: v.VoucherRows.map((r, i) => ({
           rowIndex: i + 1,

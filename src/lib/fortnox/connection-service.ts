@@ -27,6 +27,12 @@ export async function completeConnect(db: Db, client: FortnoxClient, input: { co
   });
 }
 
+export async function markNeedsReauth(db: Db, reason: string): Promise<void> {
+  const conn = await getConnection(db);
+  if (!conn) return;
+  await db.update(schema.fortnoxConnection).set({ status: 'needs_reauth', lastRefreshError: reason, updatedAt: new Date() }).where(eq(schema.fortnoxConnection.id, conn.id));
+}
+
 export async function disconnect(db: Db): Promise<void> {
   const conn = await getConnection(db);
   if (!conn) return;

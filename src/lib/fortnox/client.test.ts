@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createFortnoxClient } from './client';
+import { createFortnoxClient, FortnoxApiError } from './client';
 
 describe('createFortnoxClient', () => {
   afterEach(() => {
@@ -31,5 +31,27 @@ describe('createFortnoxClient', () => {
     const client = createFortnoxClient(fakeFetch);
     await client.getFinancialYears('token');
     expect(calls).toBe(2);
+  });
+
+  it('throws a FortnoxApiError carrying the status on a non-ok response', async () => {
+    const fakeFetch = (async () => new Response('token revoked', { status: 401 })) as typeof fetch;
+    const client = createFortnoxClient(fakeFetch);
+    await expect(client.getFinancialYears('token')).rejects.toMatchObject(new FortnoxApiError(401, '/financialyears', 'token revoked'));
+  });
+
+  it('paginates /accounts across multiple pages instead of returning only page 1', async () => {
+    const urls: string[] = [];
+    const fakeFetch = (async (url: string) => {
+      urls.push(url);
+      const page = new URL(url).searchParams.get('page');
+      if (page === '1') {
+        return new Response(JSON.stringify({ Accounts: [{ Number: 1000, Description: 'A', Active: true }], MetaInformation: { '@TotalPages': 2 } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ Accounts: [{ Number: 2000, Description: 'B', Active: true }], MetaInformation: { '@TotalPages': 2 } }), { status: 200 });
+    }) as typeof fetch;
+    const client = createFortnoxClient(fakeFetch);
+    const accounts = await client.getAccounts('token', 2027);
+    expect(accounts.map((a) => a.number)).toEqual([1000, 2000]);
+    expect(urls).toHaveLength(2);
   });
 });

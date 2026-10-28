@@ -1,7 +1,7 @@
 import { getDb } from '@/db';
-import { createFortnoxClient } from '@/lib/fortnox/client';
-import { getValidAccessToken, NeedsReauthError } from '@/lib/fortnox/connection-service';
-import { syncVouchersForYear } from '@/lib/fortnox/sync-service';
+import { FortnoxApiError, createFortnoxClient } from '@/lib/fortnox/client';
+import { getValidAccessToken, markNeedsReauth, NeedsReauthError } from '@/lib/fortnox/connection-service';
+import { pickRecentFinancialYears, recordSyncCompletion, syncReferenceData, syncVouchersForYear } from '@/lib/fortnox/sync-service';
 
 export async function POST(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET;
@@ -19,10 +19,25 @@ export async function POST(request: Request): Promise<Response> {
     throw error;
   }
 
-  const financialYears = await client.getFinancialYears(accessToken);
-  const today = new Date().toISOString().slice(0, 10);
-  const currentYear = financialYears.find((fy) => fy.fromDate <= today && today <= fy.toDate) ?? financialYears[0];
-  if (currentYear) await syncVouchersForYear(db, client, accessToken, currentYear.fortnoxId);
+  try {
+    const financialYears = await client.getFinancialYears(accessToken);
+    const yearsInScope = pickRecentFinancialYears(financialYears);
 
-  return Response.json({ synced: currentYear?.fortnoxId ?? null });
+    for (const fy of yearsInScope) {
+      // Reference data first: a voucher row can reference a cost centre or Fortnox project
+      // created since the last sync, and fx_voucher_row has a real FK to both — syncing
+      // vouchers before the codes they point at exist would abort the whole run.
+      await syncReferenceData(db, client, accessToken, fy.fortnoxId);
+      await syncVouchersForYear(db, client, accessToken, fy.fortnoxId);
+    }
+
+    await recordSyncCompletion(db);
+    return Response.json({ synced: yearsInScope.map((fy) => fy.fortnoxId) });
+  } catch (error) {
+    if (error instanceof FortnoxApiError && error.status === 401) {
+      await markNeedsReauth(db, error.message);
+      return Response.json({ error: 'needs_reauth' }, { status: 200 });
+    }
+    throw error;
+  }
 }

@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
 
 export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer';
 export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
@@ -219,7 +219,7 @@ export const fxAccount = pgTable('fx_account', {
   name: text('name').notNull(),
   active: boolean('active').notNull(),
   syncedAt: timestamp('synced_at').notNull().defaultNow(),
-}, (t) => [index('fx_account_year_number_idx').on(t.year, t.number)]);
+}, (t) => [unique('fx_account_year_number_key').on(t.year, t.number)]);
 
 export const fxCostCentre = pgTable('fx_cost_centre', {
   id: text('id').primaryKey(),
@@ -249,7 +249,7 @@ export const fxVoucher = pgTable('fx_voucher', {
   comments: text('comments'),
   hasAttachment: boolean('has_attachment').notNull().default(false),
   syncedAt: timestamp('synced_at').notNull().defaultNow(),
-}, (t) => [index('fx_voucher_key_idx').on(t.year, t.series, t.number)]);
+}, (t) => [unique('fx_voucher_key').on(t.year, t.series, t.number)]);
 
 export const fxVoucherRow = pgTable('fx_voucher_row', {
   id: text('id').primaryKey(),
@@ -263,7 +263,7 @@ export const fxVoucherRow = pgTable('fx_voucher_row', {
   transactionInfo: text('transaction_info'),
   removed: boolean('removed').notNull().default(false),
   syncedAt: timestamp('synced_at').notNull().defaultNow(),
-}, (t) => [index('fx_voucher_row_voucher_idx').on(t.voucherId, t.rowIndex)]);
+}, (t) => [unique('fx_voucher_row_key').on(t.voucherId, t.rowIndex)]);
 
 export const fxSyncState = pgTable('fx_sync_state', {
   topic: text('topic').primaryKey(),

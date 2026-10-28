@@ -1,0 +1,14 @@
+name: fortnox-sync
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Fortnox sync
+        run: |
+          curl --fail -X POST https://members.alversjo.land/api/cron/fortnox-sync \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
