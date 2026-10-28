@@ -318,3 +318,6 @@ export type AreaGridCell = typeof areaGridCell.$inferSelect;
 export type EventArea = typeof eventArea.$inferSelect;
 export type EventSignup = typeof eventSignup.$inferSelect;
 export type DecisionLog = typeof decisionLog.$inferSelect;
+export type ProjectGroup = typeof projectGroup.$inferSelect;
+export type AnnualBudget = typeof annualBudget.$inferSelect;
+export type BudgetAmount = typeof budgetAmount.$inferSelect;
