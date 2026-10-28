@@ -3,9 +3,15 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { AnnualBudget, BudgetAmount, BudgetLineKind } from '@/db/schema';
 import { logDecision } from '@/lib/decision-log';
+import { findOrCreateProjectGroupByName } from '@/lib/project-groups/service';
+import { parseBudgetCsv } from './csv-parser';
 
 export class BudgetVersionNotEditableError extends Error {
   constructor(id: string) { super(`Budget version ${id} is not the current draft`); this.name = 'BudgetVersionNotEditableError'; }
+}
+
+export class DraftNotEmptyError extends Error {
+  constructor(id: string) { super(`Budget draft ${id} already has lines — import only seeds an empty draft`); this.name = 'DraftNotEmptyError'; }
 }
 
 export type BudgetAmountInput = {
@@ -141,4 +147,45 @@ export function computeBudgetTotals(lines: BudgetAmount[]): { totalCostSek: numb
     else totalAllocationSek += line.amountSek;
   }
   return { totalCostSek, totalIncomeSek, totalAllocationSek, resultSek: totalIncomeSek - totalCostSek };
+}
+
+export type ImportBudgetCsvResult = { annualBudget: AnnualBudget; linesImported: number; groupsCreated: number; skippedTotalLabels: string[] };
+
+export async function importBudgetCsv(db: Db, csvText: string): Promise<ImportBudgetCsvResult> {
+  const parsed = parseBudgetCsv(csvText);
+  const draft = await getOrCreateDraft(db, parsed.fiscalYear);
+
+  const existingLines = await listBudgetAmounts(db, draft.id);
+  if (existingLines.length > 0) throw new DraftNotEmptyError(draft.id);
+
+  const existingGroupNames = new Set((await db.select().from(schema.projectGroup)).map((g) => g.name.toLowerCase()));
+  const createdGroupNames = new Set<string>();
+
+  for (const line of parsed.lines) {
+    let projectGroupId: string | null = null;
+    if (line.groupName) {
+      const group = await findOrCreateProjectGroupByName(db, line.groupName);
+      projectGroupId = group.id;
+      const key = line.groupName.toLowerCase();
+      if (!existingGroupNames.has(key)) createdGroupNames.add(key);
+    }
+    await upsertBudgetAmount(db, {
+      annualBudgetId: draft.id,
+      description: line.description,
+      projectGroupId,
+      projectId: null,
+      kind: line.kind,
+      month: null,
+      amountSek: line.amountSek,
+      accountFrom: null,
+      accountTo: null,
+    });
+  }
+
+  return {
+    annualBudget: draft,
+    linesImported: parsed.lines.length,
+    groupsCreated: createdGroupNames.size,
+    skippedTotalLabels: parsed.skippedTotalLabels,
+  };
 }

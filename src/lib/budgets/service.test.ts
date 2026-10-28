@@ -1,15 +1,34 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { BudgetAmount } from '@/db/schema';
-import { createProjectGroup } from '@/lib/project-groups/service';
+import { createProjectGroup, getProjectGroup, listProjectGroups } from '@/lib/project-groups/service';
 import {
-  approveBudget, BudgetVersionNotEditableError, computeBudgetTotals, deleteBudgetAmount, getOrCreateDraft,
-  listBudgetAmounts, listVersions, upsertBudgetAmount,
+  approveBudget, BudgetVersionNotEditableError, computeBudgetTotals, deleteBudgetAmount, DraftNotEmptyError,
+  getOrCreateDraft, importBudgetCsv, listBudgetAmounts, listVersions, upsertBudgetAmount,
 } from './service';
 
 async function seedGroup(db: Db, name = 'Infrastructure') {
   return createProjectGroup(db, { name, costCentreCode: null, parentId: null });
 }
+
+const SAMPLE = `YEAR,2026
+required principal repayments,185600
+COSTS,
+Financial Costs,
+Interest,228000
+Operating Costs,
+Electricity,50000
+Water and Sewage,0
+Land activation fund,
+2 x microgrant events (October & November),200000
+Total Costs,1515126
+REVENUE,
+Events,
+Borderland,2172800
+Total Revenue,2686516
+RESULT,1171390
+tax 20.6%,241306.34
+proposed extra bank loan repayment,750000`;
 
 describe('budgets service', () => {
   let db: Db;
@@ -85,6 +104,38 @@ describe('budgets service', () => {
     const line = await upsertBudgetAmount(db, { annualBudgetId: v1.id, description: 'X', projectGroupId: null, projectId: null, kind: 'cost', month: null, amountSek: 1, accountFrom: null, accountTo: null });
     await approveBudget(db, { annualBudgetId: v1.id, actorUserId: 'u1' });
     await expect(deleteBudgetAmount(db, line.id)).rejects.toBeInstanceOf(BudgetVersionNotEditableError);
+  });
+
+  it('imports cost, income and allocation lines into a fresh draft, creating groups as needed', async () => {
+    const result = await importBudgetCsv(db, SAMPLE);
+    expect(result.annualBudget).toMatchObject({ fiscalYear: 2026, version: 1, status: 'draft' });
+    expect(result.linesImported).toBeGreaterThan(0);
+    expect(result.groupsCreated).toBeGreaterThan(0);
+    expect(result.skippedTotalLabels).toEqual(['Total Costs', 'Total Revenue']);
+
+    const lines = await listBudgetAmounts(db, result.annualBudget.id);
+    const electricity = lines.find((l) => l.description === 'Electricity');
+    expect(electricity).toMatchObject({ kind: 'cost', amountSek: 50_000_00 });
+    const group = await getProjectGroup(db, electricity!.projectGroupId!);
+    expect(group?.name).toBe('Operating Costs');
+
+    const allocationLine = lines.find((l) => l.description === 'required principal repayments');
+    expect(allocationLine).toMatchObject({ kind: 'allocation', projectGroupId: null });
+  });
+
+  it('reuses an existing group by name instead of creating a duplicate', async () => {
+    await createProjectGroup(db, { name: 'Operating Costs', costCentreCode: null, parentId: null });
+    const result = await importBudgetCsv(db, SAMPLE);
+    const lines = await listBudgetAmounts(db, result.annualBudget.id);
+    const electricity = lines.find((l) => l.description === 'Electricity')!;
+    const groups = await listProjectGroups(db);
+    expect(groups.filter((g) => g.name === 'Operating Costs')).toHaveLength(1);
+    expect(electricity.projectGroupId).toBe(groups.find((g) => g.name === 'Operating Costs')!.id);
+  });
+
+  it('rejects importing into a draft that already has lines', async () => {
+    await importBudgetCsv(db, SAMPLE);
+    await expect(importBudgetCsv(db, SAMPLE)).rejects.toBeInstanceOf(DraftNotEmptyError);
   });
 });
 
