@@ -94,10 +94,10 @@ function LineSection({
   );
 }
 
-export default async function BudgetPage({ searchParams }: { searchParams: Promise<{ year?: string; error?: string }> }) {
+export default async function BudgetPage({ searchParams }: { searchParams: Promise<{ year?: string; error?: string; imported?: string; groupsCreated?: string }> }) {
   const treasurer = await requireTreasurer();
   const db = await getDb();
-  const { year, error } = await searchParams;
+  const { year, error, imported, groupsCreated } = await searchParams;
   const fiscalYear = year ? Number(year) : new Date().getFullYear();
 
   const draft = await getOrCreateDraft(db, fiscalYear);
@@ -114,6 +114,7 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
         <a href="/budget/import" className="text-sm underline">Import CSV</a>
       </div>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
+      {imported && <Alert className="mb-4"><AlertDescription>Imported {imported} lines, created {groupsCreated} new project groups.</AlertDescription></Alert>}
 
       <Card className="mb-6">
         <CardHeader><CardTitle>Summary (draft v{draft.version})</CardTitle></CardHeader>
