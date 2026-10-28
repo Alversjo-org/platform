@@ -1,6 +1,7 @@
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
 
-export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin';
+export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer';
+export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
 export type BoxProfile = 'admin' | 'contributor';
 export type ProjectKind = 'event' | 'ongoing' | 'build' | 'purchase';
 export type ProjectStatus = 'draft' | 'published' | 'cancelled' | 'closed' | 'archived';
@@ -186,6 +187,88 @@ export const decisionLog = pgTable('decision_log', {
   action: text('action').notNull(),
   diff: text('diff').notNull(), // JSON string
   createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const fortnoxConnection = pgTable('fortnox_connection', {
+  id: text('id').primaryKey(),
+  status: text('status', { enum: ['connected', 'needs_reauth', 'disconnected'] }).$type<FortnoxConnectionStatus>().notNull().default('disconnected'),
+  accessToken: text('access_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at'),
+  refreshToken: text('refresh_token'),
+  scope: text('scope'),
+  connectedByUserId: text('connected_by_user_id').references(() => user.id),
+  connectedAt: timestamp('connected_at'),
+  lastRefreshedAt: timestamp('last_refreshed_at'),
+  lastRefreshError: text('last_refresh_error'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const fxFinancialYear = pgTable('fx_financial_year', {
+  id: text('id').primaryKey(),
+  fortnoxId: integer('fortnox_id').notNull().unique(),
+  fromDate: text('from_date').notNull(), // ISO date (YYYY-MM-DD), stored as text like Fortnox returns it
+  toDate: text('to_date').notNull(),
+  lockedUntilDate: text('locked_until_date'),
+  syncedAt: timestamp('synced_at').notNull().defaultNow(),
+});
+
+export const fxAccount = pgTable('fx_account', {
+  id: text('id').primaryKey(),
+  year: integer('year').notNull(),
+  number: integer('number').notNull(),
+  name: text('name').notNull(),
+  active: boolean('active').notNull(),
+  syncedAt: timestamp('synced_at').notNull().defaultNow(),
+}, (t) => [unique('fx_account_year_number_key').on(t.year, t.number)]);
+
+export const fxCostCentre = pgTable('fx_cost_centre', {
+  id: text('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  active: boolean('active').notNull(),
+  syncedAt: timestamp('synced_at').notNull().defaultNow(),
+});
+
+export const fxProject = pgTable('fx_project', {
+  id: text('id').primaryKey(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  active: boolean('active').notNull(),
+  syncedAt: timestamp('synced_at').notNull().defaultNow(),
+});
+
+export const fxVoucher = pgTable('fx_voucher', {
+  id: text('id').primaryKey(),
+  year: integer('year').notNull(),
+  series: text('series').notNull(),
+  number: integer('number').notNull(),
+  date: text('date').notNull(),
+  description: text('description').notNull().default(''),
+  referenceType: text('reference_type'),
+  referenceNumber: text('reference_number'),
+  comments: text('comments'),
+  hasAttachment: boolean('has_attachment').notNull().default(false),
+  syncedAt: timestamp('synced_at').notNull().defaultNow(),
+}, (t) => [unique('fx_voucher_key').on(t.year, t.series, t.number)]);
+
+export const fxVoucherRow = pgTable('fx_voucher_row', {
+  id: text('id').primaryKey(),
+  voucherId: text('voucher_id').notNull().references(() => fxVoucher.id, { onDelete: 'cascade' }),
+  rowIndex: integer('row_index').notNull(),
+  account: integer('account').notNull(),
+  debitSek: integer('debit_sek').notNull().default(0),
+  creditSek: integer('credit_sek').notNull().default(0),
+  costCentreCode: text('cost_centre_code').references(() => fxCostCentre.code),
+  fxProjectCode: text('fx_project_code').references(() => fxProject.code),
+  transactionInfo: text('transaction_info'),
+  removed: boolean('removed').notNull().default(false),
+  syncedAt: timestamp('synced_at').notNull().defaultNow(),
+}, (t) => [unique('fx_voucher_row_key').on(t.voucherId, t.rowIndex)]);
+
+export const fxSyncState = pgTable('fx_sync_state', {
+  topic: text('topic').primaryKey(),
+  lastWebsocketOffset: text('last_websocket_offset'),
+  lastFullSyncAt: timestamp('last_full_sync_at'),
 });
 
 export type Box = typeof boxes.$inferSelect;

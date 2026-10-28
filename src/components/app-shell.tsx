@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { ROLE_LABELS } from '@/lib/roles/labels';
-import { hasAnyRole, isMemberAdmin, type SessionUser } from '@/lib/session';
+import { hasAnyRole, isMemberAdmin, isTreasurer, type SessionUser } from '@/lib/session';
 
 export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const db = await getDb();
@@ -58,6 +58,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
           {isMemberAdmin(user) && <Link href="/members" className="text-sm text-muted-foreground hover:text-foreground">Members</Link>}
           {hasAnyRole(user, ['admin', 'mapper']) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
           {hasAnyRole(user, ['admin', 'role-admin']) && <Link href="/roles" className="text-sm text-muted-foreground hover:text-foreground">Roles</Link>}
+          {isTreasurer(user) && <Link href="/fortnox" className="text-sm text-muted-foreground hover:text-foreground">Fortnox</Link>}
         </nav>
       </header>
       <Separator className="my-4" />

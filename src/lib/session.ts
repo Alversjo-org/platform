@@ -20,9 +20,14 @@ export const ADMIN_ROLES: Role[] = ['admin'];
 export const MEMBER_ADMIN_ROLES: Role[] = ['admin', 'member-admin'];
 export const MAPPER_ROLES: Role[] = ['admin', 'mapper'];
 export const ROLE_ADMIN_ROLES: Role[] = ['admin', 'role-admin'];
+export const TREASURER_ROLES: Role[] = ['admin', 'treasurer'];
 
 export function isMemberAdmin(user: { roles: Role[] }): boolean {
   return hasAnyRole(user, MEMBER_ADMIN_ROLES);
+}
+
+export function isTreasurer(user: { roles: Role[] }): boolean {
+  return hasAnyRole(user, TREASURER_ROLES);
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -51,3 +56,4 @@ export const requireAdmin = () => requireAnyRole(ADMIN_ROLES);
 export const requireMemberAdmin = () => requireAnyRole(MEMBER_ADMIN_ROLES);
 export const requireMapper = () => requireAnyRole(MAPPER_ROLES);
 export const requireRoleAdmin = () => requireAnyRole(ROLE_ADMIN_ROLES);
+export const requireTreasurer = () => requireAnyRole(TREASURER_ROLES);

@@ -8,6 +8,7 @@ describe('ROLE_LABELS', () => {
       'role-admin': 'Role-Manager',
       'member-admin': 'Member-Manager',
       mapper: 'Mapper',
+      treasurer: 'Treasurer',
     });
     const labels = Object.values(ROLE_LABELS);
     expect(new Set(labels).size).toBe(labels.length);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import {
-  ADMIN_ROLES, hasAnyRole, isMemberAdmin, MAPPER_ROLES, MEMBER_ADMIN_ROLES, ROLE_ADMIN_ROLES, rolesFor,
+  ADMIN_ROLES, hasAnyRole, isMemberAdmin, isTreasurer, MAPPER_ROLES, MEMBER_ADMIN_ROLES, ROLE_ADMIN_ROLES, rolesFor, TREASURER_ROLES,
 } from './session';
 
 describe('hasAnyRole', () => {
@@ -25,12 +25,22 @@ describe('isMemberAdmin', () => {
   });
 });
 
+describe('isTreasurer', () => {
+  it('is true for admin and treasurer, false for mapper or no roles', () => {
+    expect(isTreasurer({ roles: ['admin'] })).toBe(true);
+    expect(isTreasurer({ roles: ['treasurer'] })).toBe(true);
+    expect(isTreasurer({ roles: ['mapper'] })).toBe(false);
+    expect(isTreasurer({ roles: [] })).toBe(false);
+  });
+});
+
 describe('named-wrapper role lists', () => {
   it('each wrapper admits exactly the roles it is supposed to, and nothing else', () => {
     expect(ADMIN_ROLES).toEqual(['admin']);
     expect(MEMBER_ADMIN_ROLES).toEqual(['admin', 'member-admin']);
     expect(MAPPER_ROLES).toEqual(['admin', 'mapper']);
     expect(ROLE_ADMIN_ROLES).toEqual(['admin', 'role-admin']);
+    expect(TREASURER_ROLES).toEqual(['admin', 'treasurer']);
   });
 
   it('a member-admin-only user does not satisfy the mapper gate', () => {
