@@ -7,7 +7,7 @@ import { getEventDetails, InvalidCapacityError, upsertEventDetails } from '@/lib
 import { parseEventDetailsForm } from '@/lib/events/parse-details-form';
 import { bookEventAreas, removeEventArea } from '@/lib/areas/booking-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
-import { getProjectBySlug, updateProjectMeta } from '@/lib/projects/service';
+import { getProjectBySlug, setProjectGroup, updateProjectMeta } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
 
 async function loadEditableProject(slug: string) {
@@ -33,6 +33,15 @@ export async function updateEventMetaAction(formData: FormData) {
     summary: String(formData.get('summary') ?? '').trim(),
     body: String(formData.get('body') ?? '').trim(),
   });
+  revalidatePath(`/events/${slug}/edit`);
+  redirect(`/events/${slug}/edit`);
+}
+
+export async function setProjectGroupAction(formData: FormData) {
+  const slug = String(formData.get('slug'));
+  const { db, project } = await loadEditableProject(slug);
+  const projectGroupIdRaw = String(formData.get('projectGroupId') ?? '').trim();
+  await setProjectGroup(db, { projectId: project.id, projectGroupId: projectGroupIdRaw === '' ? null : projectGroupIdRaw });
   revalidatePath(`/events/${slug}/edit`);
   redirect(`/events/${slug}/edit`);
 }

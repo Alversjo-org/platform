@@ -17,13 +17,14 @@ import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
 import { listEventAreas } from '@/lib/areas/booking-service';
 import { getEventDetails } from '@/lib/events/details-service';
+import { listProjectGroups } from '@/lib/project-groups/service';
 import { assertEventPermission, getEventRole, NotAuthorizedError } from '@/lib/projects/authorization';
 import { ALLOWED_TRANSITIONS, getProjectBySlug } from '@/lib/projects/service';
 import { requireUser } from '@/lib/session';
 import { oreToSek } from '@/lib/money';
 import { splitStockholmDateAndTime, utcToStockholmWallClock } from '@/lib/timezone';
 import { archiveEventAction, cancelEventAction, closeEventAction, publishAction } from '../actions';
-import { bookAreasAction, removeAreaAction, updateEventDetailsAction, updateEventMetaAction } from './actions';
+import { bookAreasAction, removeAreaAction, setProjectGroupAction, updateEventDetailsAction, updateEventMetaAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,7 @@ export default async function EditEventPage({
   const details = await getEventDetails(db, project.id);
   const bookings = await listEventAreas(db, project.id);
   const areas = await listAreas(db);
+  const projectGroups = await listProjectGroups(db);
   const starts = details ? splitStockholmDateAndTime(details.startsAt) : { date: '', time: null };
   const ends = details ? splitStockholmDateAndTime(details.endsAt) : { date: '', time: null };
 
@@ -86,6 +88,18 @@ export default async function EditEventPage({
             <div className="space-y-2"><Label htmlFor="summary">Summary</Label><Textarea id="summary" name="summary" defaultValue={project.summary} /></div>
             <div className="space-y-2"><Label htmlFor="body">Body</Label><Textarea id="body" name="body" rows={6} defaultValue={project.body} /></div>
             <Button type="submit">Save details</Button>
+          </form>
+          <form action={setProjectGroupAction} className="mt-4 space-y-2">
+            <input type="hidden" name="slug" value={slug} />
+            <Label htmlFor="projectGroupId">Project group</Label>
+            <select
+              id="projectGroupId" name="projectGroupId" defaultValue={project.projectGroupId ?? ''}
+              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+            >
+              <option value="">No group</option>
+              {projectGroups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <Button type="submit" size="sm">Save group</Button>
           </form>
         </CardContent>
       </Card>

@@ -1,9 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
+import { createProjectGroup } from '@/lib/project-groups/service';
 import {
   createEvent, duplicateEvent, EventCreationBlockedError, getProjectBySlug, IncompleteEventError, InvalidTransitionError,
-  listDraftEventsForUser, transitionStatus,
+  listDraftEventsForUser, setProjectGroup, transitionStatus,
 } from './service';
 
 async function draftEventWithDetailsAndArea(db: Db) {
@@ -104,6 +105,23 @@ describe('duplicateEvent', () => {
     const source = await createEvent(db, { title: 'X', summary: '', ownerUserId: 'u1' });
     await db.update(schema.user).set({ canCreateEvents: false }).where(eq(schema.user.id, 'u1'));
     await expect(duplicateEvent(db, { sourceProjectId: source.id, actorUserId: 'u1' })).rejects.toBeInstanceOf(EventCreationBlockedError);
+  });
+});
+
+describe('setProjectGroup', () => {
+  let db: Db;
+  beforeEach(async () => {
+    db = await createDb('pglite://memory');
+    await db.insert(schema.user).values({ id: 'u1', email: 'u1@example.org' });
+  });
+
+  it('sets and clears a project\'s group', async () => {
+    const event = await createEvent(db, { title: 'X', summary: '', ownerUserId: 'u1' });
+    const group = await createProjectGroup(db, { name: 'Infrastructure', costCentreCode: null, parentId: null });
+    const updated = await setProjectGroup(db, { projectId: event.id, projectGroupId: group.id });
+    expect(updated.projectGroupId).toBe(group.id);
+    const cleared = await setProjectGroup(db, { projectId: event.id, projectGroupId: null });
+    expect(cleared.projectGroupId).toBeNull();
   });
 });
 
