@@ -304,6 +304,7 @@ export const budgetAmount = pgTable('budget_amount', {
   amountSek: integer('amount_sek').notNull(), // öre, despite the name — platform-wide convention
   accountFrom: integer('account_from'),
   accountTo: integer('account_to'),
+  createdAt: timestamp('created_at').notNull().defaultNow(), // stable list order — an edit must not change a row's position
 });
 
 export type Box = typeof boxes.$inferSelect;

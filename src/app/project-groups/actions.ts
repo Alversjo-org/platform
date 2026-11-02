@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/db';
-import { CostCentreAlreadyMappedError, createProjectGroup, updateProjectGroup } from '@/lib/project-groups/service';
+import { CostCentreAlreadyMappedError, createProjectGroup, UnknownCostCentreError, updateProjectGroup } from '@/lib/project-groups/service';
 import { requireTreasurer } from '@/lib/session';
 
 function parseProjectGroupInput(formData: FormData) {
@@ -21,7 +21,7 @@ export async function createProjectGroupAction(formData: FormData) {
   try {
     await createProjectGroup(await getDb(), parseProjectGroupInput(formData));
   } catch (e) {
-    if (e instanceof CostCentreAlreadyMappedError) redirect(`/project-groups?error=${encodeURIComponent(e.message)}`);
+    if (e instanceof CostCentreAlreadyMappedError || e instanceof UnknownCostCentreError) redirect(`/project-groups?error=${encodeURIComponent(e.message)}`);
     throw e;
   }
   revalidatePath('/project-groups');
@@ -34,7 +34,7 @@ export async function updateProjectGroupAction(formData: FormData) {
   try {
     await updateProjectGroup(await getDb(), { id, ...parseProjectGroupInput(formData) });
   } catch (e) {
-    if (e instanceof CostCentreAlreadyMappedError) redirect(`/project-groups?error=${encodeURIComponent(e.message)}`);
+    if (e instanceof CostCentreAlreadyMappedError || e instanceof UnknownCostCentreError) redirect(`/project-groups?error=${encodeURIComponent(e.message)}`);
     throw e;
   }
   revalidatePath('/project-groups');

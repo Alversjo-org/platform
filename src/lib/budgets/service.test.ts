@@ -67,6 +67,15 @@ describe('budgets service', () => {
     expect(await listBudgetAmounts(db, draft.id)).toMatchObject([{ id: line.id, amountSek: 15_000_00 }]);
   });
 
+  it('keeps a stable list order when an earlier line is edited, instead of letting it jump to the end', async () => {
+    const draft = await getOrCreateDraft(db, 2027);
+    const first = await upsertBudgetAmount(db, { annualBudgetId: draft.id, description: 'First', projectGroupId: null, projectId: null, kind: 'cost', month: null, amountSek: 1, accountFrom: null, accountTo: null });
+    const second = await upsertBudgetAmount(db, { annualBudgetId: draft.id, description: 'Second', projectGroupId: null, projectId: null, kind: 'cost', month: null, amountSek: 2, accountFrom: null, accountTo: null });
+    await upsertBudgetAmount(db, { id: first.id, annualBudgetId: draft.id, description: 'First (edited)', projectGroupId: null, projectId: null, kind: 'cost', month: null, amountSek: 99, accountFrom: null, accountTo: null });
+    const lines = await listBudgetAmounts(db, draft.id);
+    expect(lines.map((l) => l.id)).toEqual([first.id, second.id]);
+  });
+
   it('rejects updating a line by passing a different annualBudgetId, instead of reassigning it out from under its real version', async () => {
     const group = await seedGroup(db);
     const v1 = await getOrCreateDraft(db, 2027);

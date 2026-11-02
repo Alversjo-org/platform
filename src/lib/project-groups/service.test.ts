@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import {
   createProjectGroup, CostCentreAlreadyMappedError, findOrCreateProjectGroupByName, listProjectGroups,
-  ProjectGroupNotFoundError, updateProjectGroup,
+  ProjectGroupNotFoundError, UnknownCostCentreError, updateProjectGroup,
 } from './service';
 
 describe('project-groups service', () => {
@@ -39,6 +39,17 @@ describe('project-groups service', () => {
     const kitchen = await createProjectGroup(db, { name: 'Kitchen', costCentreCode: 'KOK', parentId: null });
     await expect(updateProjectGroup(db, { id: kitchen.id, name: 'Kitchen', costCentreCode: 'INFRA', parentId: null }))
       .rejects.toBeInstanceOf(CostCentreAlreadyMappedError);
+  });
+
+  it('rejects a cost centre code that does not exist, with a clear error instead of a raw FK violation', async () => {
+    await expect(createProjectGroup(db, { name: 'Infrastructure', costCentreCode: 'NOPE', parentId: null }))
+      .rejects.toBeInstanceOf(UnknownCostCentreError);
+  });
+
+  it('rejects remapping to a cost centre code that does not exist', async () => {
+    const group = await createProjectGroup(db, { name: 'Infrastructure', costCentreCode: null, parentId: null });
+    await expect(updateProjectGroup(db, { id: group.id, name: 'Infrastructure', costCentreCode: 'NOPE', parentId: null }))
+      .rejects.toBeInstanceOf(UnknownCostCentreError);
   });
 
   it('throws for an unknown id on update', async () => {

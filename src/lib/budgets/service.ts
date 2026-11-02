@@ -81,7 +81,7 @@ export function listVersions(db: Db, fiscalYear: number): Promise<AnnualBudget[]
 }
 
 export function listBudgetAmounts(db: Db, annualBudgetId: string): Promise<BudgetAmount[]> {
-  return db.select().from(schema.budgetAmount).where(eq(schema.budgetAmount.annualBudgetId, annualBudgetId));
+  return db.select().from(schema.budgetAmount).where(eq(schema.budgetAmount.annualBudgetId, annualBudgetId)).orderBy(schema.budgetAmount.createdAt);
 }
 
 export async function upsertBudgetAmount(db: Db, input: BudgetAmountInput): Promise<BudgetAmount> {

@@ -11,13 +11,30 @@ export class CostCentreAlreadyMappedError extends Error {
   constructor(costCentreCode: string) { super(`Cost centre ${costCentreCode} is already mapped to another group`); this.name = 'CostCentreAlreadyMappedError'; }
 }
 
+export class UnknownCostCentreError extends Error {
+  constructor(costCentreCode: string) { super(`No Fortnox cost centre with code ${costCentreCode}`); this.name = 'UnknownCostCentreError'; }
+}
+
 export type ProjectGroupInput = { name: string; costCentreCode: string | null; parentId: string | null };
 
+function pgErrorCode(error: unknown): string | undefined {
+  const pgError = error as { code?: string; cause?: { code?: string } };
+  return pgError.code ?? pgError.cause?.code;
+}
+
+function pgErrorConstraint(error: unknown): string | undefined {
+  const pgError = error as { constraint?: string; cause?: { constraint?: string } };
+  return pgError.constraint ?? pgError.cause?.constraint;
+}
+
 function isCostCentreUniqueViolation(error: unknown): boolean {
-  const pgError = error as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
-  const code = pgError.code ?? pgError.cause?.code;
-  const constraint = pgError.constraint ?? pgError.cause?.constraint;
-  return code === '23505' && typeof constraint === 'string' && constraint.includes('cost_centre_code');
+  const constraint = pgErrorConstraint(error);
+  return pgErrorCode(error) === '23505' && typeof constraint === 'string' && constraint.includes('cost_centre_code');
+}
+
+function isCostCentreForeignKeyViolation(error: unknown): boolean {
+  const constraint = pgErrorConstraint(error);
+  return pgErrorCode(error) === '23503' && typeof constraint === 'string' && constraint.includes('cost_centre_code');
 }
 
 export function listProjectGroups(db: Db): Promise<ProjectGroup[]> {
@@ -35,6 +52,7 @@ export async function createProjectGroup(db: Db, input: ProjectGroupInput): Prom
     return row;
   } catch (error) {
     if (isCostCentreUniqueViolation(error)) throw new CostCentreAlreadyMappedError(input.costCentreCode ?? '');
+    if (isCostCentreForeignKeyViolation(error)) throw new UnknownCostCentreError(input.costCentreCode ?? '');
     throw error;
   }
 }
@@ -47,6 +65,7 @@ export async function updateProjectGroup(db: Db, input: ProjectGroupInput & { id
     return row;
   } catch (error) {
     if (isCostCentreUniqueViolation(error)) throw new CostCentreAlreadyMappedError(input.costCentreCode ?? '');
+    if (isCostCentreForeignKeyViolation(error)) throw new UnknownCostCentreError(input.costCentreCode ?? '');
     throw error;
   }
 }
