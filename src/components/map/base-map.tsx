@@ -2,9 +2,10 @@
 
 import 'leaflet/dist/leaflet.css';
 import type { ReactNode } from 'react';
-import { ImageOverlay, LayersControl, MapContainer, TileLayer } from 'react-leaflet';
+import { ImageOverlay, LayersControl, MapContainer, Pane, TileLayer } from 'react-leaflet';
 import { DRONE_2026, MAP_IMAGE_SRC, MAP_MAX_ZOOM, SITE_CENTER, SITE_ZOOM } from '@/lib/map/constants';
 import { legacyImageBounds } from '@/lib/map/legacy-image';
+import { SiteLayers } from './site-layers';
 
 /**
  * Leaflet map of the site with the shared background layers. Browser-only: import it through
@@ -24,6 +25,8 @@ export default function BaseMap({ children, className, editable = false }: {
       center={SITE_CENTER} zoom={SITE_ZOOM} maxZoom={MAP_MAX_ZOOM} className={className} scrollWheelZoom
       {...(editable ? { pmIgnore: false } : {})}
     >
+      {/* Above the tiles (200), below reference shapes (350) and areas (400). */}
+      <Pane name="legacy-image" style={{ zIndex: 300 }} />
       <LayersControl position="topright">
         <LayersControl.BaseLayer checked name="OpenStreetMap">
           <TileLayer
@@ -43,8 +46,9 @@ export default function BaseMap({ children, className, editable = false }: {
           />
         </LayersControl.Overlay>
         <LayersControl.Overlay name="Old property map">
-          <ImageOverlay url={MAP_IMAGE_SRC} bounds={legacyImageBounds()} opacity={0.85} />
+          <ImageOverlay url={MAP_IMAGE_SRC} bounds={legacyImageBounds()} opacity={0.85} pane="legacy-image" />
         </LayersControl.Overlay>
+        <SiteLayers />
       </LayersControl>
       {children}
     </MapContainer>

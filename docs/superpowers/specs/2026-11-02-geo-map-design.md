@@ -39,7 +39,25 @@ editor download it (~150 KB). Layers:
 - OpenStreetMap (base);
 - drone orthophoto July 2026, 5 cm/px, Ebbe Valbak, CC-BY 4.0, served as tiles by
   OpenAerialMap (on by default; tiles only for what is on screen, a few MB per view);
-- the old property map image (off by default).
+- the old property map image (off by default);
+- reference layers from `public/map/site/` (see below).
+
+## Reference layers
+
+Static GeoJSON in `public/map/site/`, taken on 2026-11-02 from the Borderland placement map
+(github.com/theborderland/map, commit 826dccb) and the alversjomaps sound guide, with the
+Borderland team's permission. Only permanent site features; event-specific things (camps,
+plazas, neighbourhoods, main parking, gate, The Sanctuary, event toilets) are left out.
+
+| Layer | Default |
+|---|---|
+| Property border + nature reserve | on |
+| Places: The Barn, Machine Hall, The Brewery, Sheep barn, The Well, water tap, Downtown toilets | on |
+| Buildings, lakes + water protection zone, paths, protected biotopes, flood-prone spots, neighbours, sound zones (class A–F) | off |
+
+Reference shapes are drawn below areas (pane z-index 350) so they never catch clicks meant for
+an area; reference points above them (450). The import script lives outside this repo
+(`tools/map-data/import-site-layers.py` in the maintainers' workspace); rerun it to refresh.
 
 `/map` (any member) draws each mapped area with its name; clicking shows details and upcoming
 bookings, as before. `/areas/[id]/shape` (admin, mapper) replaces the cell picker with
@@ -54,10 +72,9 @@ other areas.
 
 ## Later
 
-1. Earlier drone years (2022–2025, ~430 MB of tiles) as one PMTiles file per year on Cloudflare
-   R2, with a year switcher. They currently live only in the Borderland repo, which has no
-   licence: ask before copying.
-2. Rehost the 2026 imagery too; OpenAerialMap renders it from a bucket named `…-temp`.
-3. Offline: a service worker that pre-caches the site's tiles up to z18 (~50 MB per year).
-4. Point features (toilets, water, power) as a `map_feature` table.
-5. Borderland's property border and buildings as layers, with their permission.
+1. Rehost the 2026 imagery; OpenAerialMap renders it from a bucket named `…-temp`. (The
+   2022–2025 drone photos are post-event "aftermath" shots; not needed for this map.)
+2. Offline: a service worker that pre-caches the site's tiles up to z18 (~50 MB).
+3. Editable points (so members can move a toilet or add a water point) as a `map_feature`
+   table, seeded from `points.geojson`.
+4. A neutral, non-event aerial base layer (e.g. Lantmäteriet's open orthophoto).
