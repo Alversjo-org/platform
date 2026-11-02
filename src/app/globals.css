@@ -137,3 +137,11 @@
   font-weight: 600;
   text-shadow: 0 0 3px #000, 0 0 2px #000;
 }
+
+/* The draggable point in the map feature editor. */
+.map-edit-point {
+  background: #2563eb;
+  border: 3px solid #fff;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1px #0006, 0 1px 4px #0008;
+}

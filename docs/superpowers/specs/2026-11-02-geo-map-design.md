@@ -40,14 +40,22 @@ editor download it (~150 KB). Layers:
 - drone orthophoto July 2026, 5 cm/px, Ebbe Valbak, CC-BY 4.0, served as tiles by
   OpenAerialMap (on by default; tiles only for what is on screen, a few MB per view);
 - the old property map image (off by default);
-- reference layers from `public/map/site/` (see below).
+- map features from the database (see below).
 
-## Reference layers
+## Map features (places, borders, paths, zones)
 
-Static GeoJSON in `public/map/site/`, taken on 2026-11-02 from the Borderland placement map
-(github.com/theborderland/map, commit 826dccb) and the alversjomaps sound guide, with the
-Borderland team's permission. Only permanent site features; event-specific things (camps,
-plazas, neighbourhoods, main parking, gate, The Sanctuary, event toilets) are left out.
+Everything on the map that isn't a bookable area is a row in `map_feature`: `kind`, `name`,
+`description`, GeoJSON `geometry` (WGS84) and kind-specific `properties` (e.g. a sound zone's
+class and colour). `src/lib/map/feature-kinds.ts` defines each kind's layer, shape family
+(point, line or polygon) and colour; a feature's geometry must match its kind's family, and its
+kind can only change within the family.
+
+The initial 171 features come from migration `0013` (a data migration, so it runs exactly once
+and features a mapper deletes stay deleted): permanent site features from the Borderland
+placement map (github.com/theborderland/map, commit 826dccb) and the alversjomaps sound guide,
+taken 2026-11-02 with the Borderland team's permission. Event-specific things (camps, plazas,
+neighbourhoods, main parking, gate, The Sanctuary, event toilets) are left out. The scripts that
+produced it live outside this repo (`tools/map-data/` in the maintainers' workspace).
 
 | Layer | Default |
 |---|---|
@@ -55,9 +63,14 @@ plazas, neighbourhoods, main parking, gate, The Sanctuary, event toilets) are le
 | Places: The Barn, Machine Hall, The Brewery, Sheep barn, The Well, water tap, Downtown toilets | on |
 | Buildings, lakes + water protection zone, paths, protected biotopes, flood-prone spots, neighbours, sound zones (class A–F) | off |
 
-Reference shapes are drawn below areas (pane z-index 350) so they never catch clicks meant for
-an area; reference points above them (450). The import script lives outside this repo
-(`tools/map-data/import-site-layers.py` in the maintainers' workspace); rerun it to refresh.
+Feature shapes are drawn below areas (pane z-index 350) so they never catch clicks meant for an
+area; feature points above them (450).
+
+Editing (admin, mapper): `/map/features` lists everything by layer; `/map/features/new?shape=…`
+and `/map/features/[id]` edit name, kind, description and geometry. Points: click the map to
+place, drag to move. Lines and shapes: the same geoman tools as the area editor. On `/map`,
+mappers get an Edit link in each feature's popup. `GET /map/features.geojson` (members only)
+exports them.
 
 `/map` (any member) draws each mapped area with its name; clicking shows details and upcoming
 bookings, as before. `/areas/[id]/shape` (admin, mapper) replaces the cell picker with
@@ -75,6 +88,4 @@ other areas.
 1. Rehost the 2026 imagery; OpenAerialMap renders it from a bucket named `…-temp`. (The
    2022–2025 drone photos are post-event "aftermath" shots; not needed for this map.)
 2. Offline: a service worker that pre-caches the site's tiles up to z18 (~50 MB).
-3. Editable points (so members can move a toilet or add a water point) as a `map_feature`
-   table, seeded from `points.geojson`.
-4. A neutral, non-event aerial base layer (e.g. Lantmäteriet's open orthophoto).
+3. A neutral, non-event aerial base layer (e.g. Lantmäteriet's open orthophoto).

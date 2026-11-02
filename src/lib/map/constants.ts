@@ -31,11 +31,7 @@ export const DRONE_2026 = {
 export const MAP_MAX_ZOOM = 22;
 
 /**
- * Static reference layers in `public/map/site/`: property border, nature reserve, buildings,
- * lakes and the water protection zone, paths, sound zones, and points (venues, water, toilets,
- * protected biotopes, flood spots, neighbours). Taken from the Borderland placement map
- * (github.com/theborderland/map, commit 826dccb) and the alversjomaps sound guide on 2026-11-02,
- * with the Borderland team's permission; only permanent site features, nothing event-specific.
+ * Attribution for the initial map features (migration 0013): taken from the Borderland placement
+ * map and the alversjomaps sound guide, with the Borderland team's permission.
  */
-export const SITE_LAYERS_DIR = '/map/site';
 export const SITE_LAYERS_ATTRIBUTION = 'Site data: <a href="https://www.theborderland.se/map/">Borderland map</a>';

@@ -1,17 +1,20 @@
 'use client';
 
 import { CircleMarker, GeoJSON, Tooltip } from 'react-leaflet';
+import type { MapFeatureData } from '@/lib/map/features';
 import type { MapAreaData } from '@/lib/map/view-model';
 import BaseMap from './base-map';
 
 /** The member-facing map: every area with an outline, clickable. Browser-only (see BaseMap). */
-export default function MapViewLeaflet({ areas, selectedId, onSelect }: {
+export default function MapViewLeaflet({ areas, features, canEditFeatures, selectedId, onSelect }: {
   areas: MapAreaData[];
+  features: MapFeatureData[];
+  canEditFeatures: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
-    <BaseMap className="h-[70vh] min-h-[400px] w-full rounded-md border">
+    <BaseMap className="h-[70vh] min-h-[400px] w-full rounded-md border" features={features} featureOptions={{ editable: canEditFeatures }}>
       {areas.map((area) => (
         <GeoJSON
           // Re-mount when selection changes so the style is re-applied.

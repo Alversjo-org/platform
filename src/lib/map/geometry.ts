@@ -2,12 +2,16 @@ import cleanCoords from '@turf/clean-coords';
 import { featureCollection, polygon } from '@turf/helpers';
 import pointOnFeature from '@turf/point-on-feature';
 import union from '@turf/union';
-import type { MultiPolygon, Polygon, Position } from 'geojson';
+import type { LineString, MultiLineString, MultiPolygon, Point, Polygon, Position } from 'geojson';
 import { GRID_COLS, GRID_ROWS, SITE_BBOX } from './constants';
+import type { ShapeFamily } from './feature-kinds';
 import { imageFractionToLonLat } from './legacy-image';
 
 /** An area's outline: GeoJSON (RFC 7946), WGS84, positions as [lon, lat]. */
 export type AreaGeometry = Polygon | MultiPolygon;
+
+/** A map feature's geometry (see feature-kinds.ts for which kind uses which). */
+export type FeatureGeometry = Point | LineString | MultiLineString | Polygon | MultiPolygon;
 
 export class InvalidGeometryError extends Error {
   constructor(message: string) { super(message); this.name = 'InvalidGeometryError'; }
@@ -20,18 +24,25 @@ function round(n: number): number {
   return Math.round(n * 1e7) / 1e7;
 }
 
+function parsePosition(p: unknown, count: { n: number }): Position {
+  if (!Array.isArray(p) || p.length < 2 || !p.every((v) => typeof v === 'number' && Number.isFinite(v))) {
+    throw new InvalidGeometryError('A position must be [lon, lat] numbers.');
+  }
+  const [lon, lat] = p as number[];
+  const [w, s, e, n] = SITE_BBOX;
+  if (lon < w || lon > e || lat < s || lat > n) throw new InvalidGeometryError('The shape is outside the Alversjö area (check lon/lat order).');
+  if (++count.n > MAX_POSITIONS) throw new InvalidGeometryError('The shape has too many points.');
+  return [round(lon), round(lat)];
+}
+
+function parseLine(line: unknown, count: { n: number }): Position[] {
+  if (!Array.isArray(line) || line.length < 2) throw new InvalidGeometryError('A line needs at least 2 positions.');
+  return line.map((p) => parsePosition(p, count));
+}
+
 function parseRing(ring: unknown, count: { n: number }): Position[] {
   if (!Array.isArray(ring) || ring.length < 4) throw new InvalidGeometryError('A ring needs at least 4 positions.');
-  const [w, s, e, n] = SITE_BBOX;
-  const out = ring.map((p): Position => {
-    if (!Array.isArray(p) || p.length < 2 || !p.every((v) => typeof v === 'number' && Number.isFinite(v))) {
-      throw new InvalidGeometryError('A position must be [lon, lat] numbers.');
-    }
-    const [lon, lat] = p as number[];
-    if (lon < w || lon > e || lat < s || lat > n) throw new InvalidGeometryError('The shape is outside the Alversjö area (check lon/lat order).');
-    if (++count.n > MAX_POSITIONS) throw new InvalidGeometryError('The shape has too many points.');
-    return [round(lon), round(lat)];
-  });
+  const out = ring.map((p) => parsePosition(p, count));
   const [first, last] = [out[0], out[out.length - 1]];
   if (first[0] !== last[0] || first[1] !== last[1]) throw new InvalidGeometryError('A ring must end where it starts.');
   return out;
@@ -53,6 +64,29 @@ export function parseAreaGeometry(input: unknown): AreaGeometry {
     return { type, coordinates: coordinates.map((p) => parsePolygonRings(p, count)) };
   }
   throw new InvalidGeometryError('Only Polygon and MultiPolygon are supported.');
+}
+
+/** Validates untrusted input as a map feature geometry of the given shape family, rounding to ~1 cm. */
+export function parseFeatureGeometry(input: unknown, shape: ShapeFamily): FeatureGeometry {
+  if (shape === 'polygon') return parseAreaGeometry(input);
+  if (!input || typeof input !== 'object') throw new InvalidGeometryError('Not a geometry.');
+  const { type, coordinates } = input as { type?: unknown; coordinates?: unknown };
+  const count = { n: 0 };
+  if (shape === 'point') {
+    if (type !== 'Point') throw new InvalidGeometryError('Expected a point.');
+    return { type, coordinates: parsePosition(coordinates, count) };
+  }
+  if (type === 'LineString') return { type, coordinates: parseLine(coordinates, count) };
+  if (type === 'MultiLineString') {
+    if (!Array.isArray(coordinates) || coordinates.length === 0) throw new InvalidGeometryError('A multiline needs at least one line.');
+    return { type, coordinates: coordinates.map((l) => parseLine(l, count)) };
+  }
+  throw new InvalidGeometryError('Expected a line.');
+}
+
+/** Combines several lines into one geometry: a LineString if there is one, else a MultiLineString. */
+export function combineLines(lines: Position[][]): LineString | MultiLineString {
+  return lines.length === 1 ? { type: 'LineString', coordinates: lines[0] } : { type: 'MultiLineString', coordinates: lines };
 }
 
 /** Combines several polygons into one geometry: a Polygon if there is one, else a MultiPolygon. */

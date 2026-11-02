@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { MapFeatureData } from '@/lib/map/features';
 import type { MapAreaData } from '@/lib/map/view-model';
 
 // Leaflet needs `window`, and keeping it out of the server bundle means only map pages download it.
@@ -12,7 +13,7 @@ const MapViewLeaflet = dynamic(() => import('./map-view-leaflet'), {
   loading: () => <div className="h-[70vh] min-h-[400px] w-full animate-pulse rounded-md border bg-muted" />,
 });
 
-export function MapView({ areas }: { areas: MapAreaData[] }) {
+export function MapView({ areas, features, canEditFeatures }: { areas: MapAreaData[]; features: MapFeatureData[]; canEditFeatures: boolean }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = areas.find((a) => a.id === selectedId) ?? null;
 
@@ -23,7 +24,7 @@ export function MapView({ areas }: { areas: MapAreaData[] }) {
           No sections have been mapped yet — check back soon, or ask a mapper to draw an area under &quot;Areas&quot;.
         </p>
       )}
-      <MapViewLeaflet areas={areas} selectedId={selectedId} onSelect={setSelectedId} />
+      <MapViewLeaflet areas={areas} features={features} canEditFeatures={canEditFeatures} selectedId={selectedId} onSelect={setSelectedId} />
       {selected && (
         <Card className="mt-4">
           <CardHeader>
@@ -51,7 +52,9 @@ export function MapView({ areas }: { areas: MapAreaData[] }) {
         </Card>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
-        Map data as GeoJSON (for QGIS, Google Earth, …): <a href="/map/areas.geojson" className="underline">areas.geojson</a>
+        Map data as GeoJSON (for QGIS, Google Earth, …): <a href="/map/areas.geojson" className="underline">areas</a>,{' '}
+        <a href="/map/features.geojson" className="underline">places, borders and other features</a>
+        {canEditFeatures && <> · <Link href="/map/features" className="underline">Edit map features</Link></>}
       </p>
     </div>
   );

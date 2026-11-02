@@ -5,7 +5,8 @@ import type { ReactNode } from 'react';
 import { ImageOverlay, LayersControl, MapContainer, Pane, TileLayer } from 'react-leaflet';
 import { DRONE_2026, MAP_IMAGE_SRC, MAP_MAX_ZOOM, SITE_CENTER, SITE_ZOOM } from '@/lib/map/constants';
 import { legacyImageBounds } from '@/lib/map/legacy-image';
-import { SiteLayers } from './site-layers';
+import type { MapFeatureData } from '@/lib/map/features';
+import { FeatureLayers } from './feature-layers';
 
 /**
  * Leaflet map of the site with the shared background layers. Browser-only: import it through
@@ -14,9 +15,12 @@ import { SiteLayers } from './site-layers';
  * Tiles are fetched only for what is on screen, so the drone layer costs a few MB per view,
  * not the whole 180 MB orthophoto.
  */
-export default function BaseMap({ children, className, editable = false }: {
+export default function BaseMap({ children, className, editable = false, features = [], featureOptions }: {
   children?: ReactNode;
   className?: string;
+  /** Map features (places, borders, …) shown as overlays in the layer switcher. */
+  features?: MapFeatureData[];
+  featureOptions?: { editable?: boolean; interactive?: boolean };
   /** Lets leaflet-geoman (in opt-in mode, see area-shape-editor-leaflet) attach its tools to this map. */
   editable?: boolean;
 }) {
@@ -48,7 +52,7 @@ export default function BaseMap({ children, className, editable = false }: {
         <LayersControl.Overlay name="Old property map">
           <ImageOverlay url={MAP_IMAGE_SRC} bounds={legacyImageBounds()} opacity={0.85} pane="legacy-image" />
         </LayersControl.Overlay>
-        <SiteLayers />
+        <FeatureLayers features={features} {...featureOptions} />
       </LayersControl>
       {children}
     </MapContainer>

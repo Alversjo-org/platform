@@ -18,7 +18,8 @@ export default async function AreasPage() {
   const areas = await listAreas(await getDb());
   return (
     <AppShell user={admin}>
-      <h1 className="mb-4 text-xl font-semibold">Areas</h1>
+      <h1 className="mb-2 text-xl font-semibold">Areas</h1>
+      <p className="mb-4 text-sm text-muted-foreground">Bookable sections. Places, borders and other things on the map are under <Link href="/map/features" className="underline">Map features</Link>.</p>
       <Table>
         <TableHeader>
           <TableRow>
