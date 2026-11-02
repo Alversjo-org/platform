@@ -321,6 +321,20 @@ export const budgetAmount = pgTable('budget_amount', {
   createdAt: timestamp('created_at').notNull().defaultNow(), // stable list order — an edit must not change a row's position
 });
 
+export type TaskStatus = 'backlog' | 'doing' | 'done';
+
+export const task = pgTable('task', {
+  id: text('id').primaryKey(),
+  description: text('description').notNull(),
+  status: text('status', { enum: ['backlog', 'doing', 'done'] }).$type<TaskStatus>().notNull().default('backlog'),
+  assigneeUserId: text('assignee_user_id').references(() => user.id),
+  createdByUserId: text('created_by_user_id').notNull().references(() => user.id),
+  projectId: text('project_id').references(() => project.id, { onDelete: 'cascade' }),
+  imageUrl: text('image_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type UserRole = typeof userRole.$inferSelect;
@@ -336,3 +350,4 @@ export type DecisionLog = typeof decisionLog.$inferSelect;
 export type ProjectGroup = typeof projectGroup.$inferSelect;
 export type AnnualBudget = typeof annualBudget.$inferSelect;
 export type BudgetAmount = typeof budgetAmount.$inferSelect;
+export type Task = typeof task.$inferSelect;
