@@ -1,0 +1,1 @@
+DROP TABLE "area_grid_cell" CASCADE;

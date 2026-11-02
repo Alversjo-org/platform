@@ -15,8 +15,7 @@ Borderland placement map, GPS positions people publish).
   around the property (catches swapped lat/lon), ≤5000 positions.
 - No PostGIS: a few dozen shapes don't need it, and the tests run on PGlite. Geometry work
   happens in the app with Turf.
-- `area_grid_cell` is no longer read or written except by the one-time conversion below. Drop
-  it in a follow-up once production has been checked.
+- `area_grid_cell` was dropped (migration 0015) after production was checked on 2026-11-02.
 
 ## Old image → real coordinates
 
@@ -25,9 +24,8 @@ outlines to the building polygons in the Borderland map's `drawnmap/buildings.ge
 (github.com/theborderland/map): affine fit, 12 buildings, RMS 3.7 m, 1.15 m/px.
 `src/lib/map/legacy-image.ts` holds the transform. It is used to:
 
-- convert existing grid cells: `seedMapAreas` runs on every deploy (fly.toml
-  `release_command`) and gives every area that has cells but no geometry an outline made by
-  merging its cells. It never overwrites an existing outline;
+- convert existing grid cells (done once, on the 2026-11-02 deploy: every area with cells but
+  no geometry got an outline made by merging its cells; the code and table are gone since);
 - convert the eleven seed polygons (done once; `seed-data.ts` now holds `[lon, lat]`);
 - show the image as an optional "Old property map" layer.
 

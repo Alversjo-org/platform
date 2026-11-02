@@ -10,8 +10,8 @@ import { MAP_IMAGE_HEIGHT, MAP_IMAGE_WIDTH } from './constants';
  * at 1.152 m/px east-west and 1.149 m/px north-south with negligible rotation, which is what
  * a north-up QGIS export should give.
  *
- * Only used to (a) convert grid cells and seed polygons that were drawn on the image into
- * real coordinates, and (b) place the image as an optional overlay layer on the map.
+ * Used to place the image as an optional overlay layer on the map. (It also converted the
+ * old grid cells and seed polygons to real coordinates; both are done.)
  */
 const T = [
   0.00001932304827366211, -6.3365598701544685e-9, 14.910329725210264,

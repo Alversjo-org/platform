@@ -1,6 +1,6 @@
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { describe, expect, it } from 'vitest';
-import { cellsToGeometry, combinePolygons, InvalidGeometryError, labelPoint, parseAreaGeometry, splitPolygons } from './geometry';
+import { combinePolygons, InvalidGeometryError, labelPoint, parseAreaGeometry, splitPolygons } from './geometry';
 
 const square = [[14.925, 57.621], [14.926, 57.621], [14.926, 57.622], [14.925, 57.622], [14.925, 57.621]];
 
@@ -33,24 +33,6 @@ describe('combinePolygons / splitPolygons', () => {
     const multi = combinePolygons([[square], [square]]);
     expect(multi.type).toBe('MultiPolygon');
     expect(splitPolygons(multi)).toHaveLength(2);
-  });
-});
-
-describe('cellsToGeometry', () => {
-  it('returns null for no cells', () => {
-    expect(cellsToGeometry([])).toBeNull();
-  });
-
-  it('merges touching cells into a single polygon', () => {
-    const g = cellsToGeometry([{ col: 30, row: 50 }, { col: 31, row: 50 }, { col: 30, row: 51 }]);
-    expect(g?.type).toBe('Polygon');
-    // An L of three cells has 6 corners (+ closing position).
-    expect(g?.type === 'Polygon' && g.coordinates[0]).toHaveLength(7);
-  });
-
-  it('keeps cells that do not touch as separate polygons', () => {
-    const g = cellsToGeometry([{ col: 10, row: 10 }, { col: 40, row: 70 }]);
-    expect(g?.type).toBe('MultiPolygon');
   });
 });
 
