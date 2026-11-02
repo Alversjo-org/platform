@@ -1,5 +1,7 @@
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import type { FeatureKind } from '@/lib/map/feature-kinds';
+import type { AreaGeometry, FeatureGeometry } from '@/lib/map/geometry';
 
 export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer';
 export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
@@ -157,6 +159,8 @@ export const area = pgTable('area', {
   description: text('description').notNull().default(''),
   capacity: integer('capacity'), // advisory only
   bookable: boolean('bookable').notNull().default(true),
+  // Outline on the map: GeoJSON Polygon/MultiPolygon in WGS84 ([lon, lat]). Null = not on the map.
+  geometry: jsonb('geometry').$type<AreaGeometry>(),
 });
 
 export const areaGridCell = pgTable('area_grid_cell', {
@@ -164,6 +168,21 @@ export const areaGridCell = pgTable('area_grid_cell', {
   col: integer('col').notNull(),
   row: integer('row').notNull(),
 }, (t) => [primaryKey({ columns: [t.areaId, t.col, t.row] })]);
+
+// Things on the map that aren't bookable areas: places (water, toilets, barns), borders, paths,
+// sound zones, … Kinds, their layer and shape family are defined in src/lib/map/feature-kinds.ts.
+export const mapFeature = pgTable('map_feature', {
+  id: text('id').primaryKey(),
+  kind: text('kind').$type<FeatureKind>().notNull(),
+  name: text('name').notNull().default(''),
+  description: text('description').notNull().default(''),
+  // GeoJSON geometry in WGS84 ([lon, lat]).
+  geometry: jsonb('geometry').$type<FeatureGeometry>().notNull(),
+  // Kind-specific extras, e.g. a sound zone's class and colour.
+  properties: jsonb('properties').$type<Record<string, string | number | boolean>>().notNull().default({}),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedByUserId: text('updated_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+}, (t) => [index('map_feature_kind_idx').on(t.kind)]);
 
 export const eventArea = pgTable('event_area', {
   id: text('id').primaryKey(),
@@ -315,6 +334,7 @@ export type Project = typeof project.$inferSelect;
 export type ProjectMember = typeof projectMember.$inferSelect;
 export type EventDetails = typeof eventDetails.$inferSelect;
 export type Area = typeof area.$inferSelect;
+export type MapFeature = typeof mapFeature.$inferSelect;
 export type AreaGridCell = typeof areaGridCell.$inferSelect;
 export type EventArea = typeof eventArea.$inferSelect;
 export type EventSignup = typeof eventSignup.$inferSelect;

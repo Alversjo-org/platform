@@ -1,6 +1,7 @@
 import type { Area } from '@/db/schema';
 import { utcToStockholmWallClock } from '@/lib/timezone';
 import { areaColor } from './area-color';
+import { labelPoint, type AreaGeometry } from './geometry';
 
 export type MapAreaData = {
   id: string;
@@ -9,12 +10,14 @@ export type MapAreaData = {
   capacity: number | null;
   bookable: boolean;
   color: string;
-  cells: Array<{ col: number; row: number }>;
+  geometry: AreaGeometry;
+  /** Leaflet [lat, lng] for the name label; always inside the shape. */
+  label: [number, number];
   bookings: Array<{ eventTitle: string; eventSlug: string; from: string; to: string }>;
 };
 
 export function buildMapAreaData(
-  areasWithCells: Array<{ area: Area; cells: Array<{ col: number; row: number }> }>,
+  areas: Area[],
   bookings: Array<{ areaId: string; eventSlug: string; eventTitle: string; from: Date; to: Date }>,
 ): MapAreaData[] {
   const bookingsByAreaId = new Map<string, Array<{ eventTitle: string; eventSlug: string; from: string; to: string }>>();
@@ -24,16 +27,19 @@ export function buildMapAreaData(
     bookingsByAreaId.set(b.areaId, list);
   }
 
-  return areasWithCells
-    .filter(({ cells }) => cells.length > 0)
-    .map(({ area, cells }) => ({
+  // An area without an outline (e.g. "Kitchen") is still bookable, just not drawn.
+  return areas.flatMap((area) => {
+    if (!area.geometry) return [];
+    return [{
       id: area.id,
       name: area.name,
       description: area.description,
       capacity: area.capacity,
       bookable: area.bookable,
       color: areaColor(area.id),
-      cells,
+      geometry: area.geometry,
+      label: labelPoint(area.geometry),
       bookings: bookingsByAreaId.get(area.id) ?? [],
-    }));
+    }];
+  });
 }

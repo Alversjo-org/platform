@@ -18,7 +18,8 @@ export default async function AreasPage() {
   const areas = await listAreas(await getDb());
   return (
     <AppShell user={admin}>
-      <h1 className="mb-4 text-xl font-semibold">Areas</h1>
+      <h1 className="mb-2 text-xl font-semibold">Areas</h1>
+      <p className="mb-4 text-sm text-muted-foreground">Bookable sections. Places, borders and other things on the map are under <Link href="/map/features" className="underline">Map features</Link>.</p>
       <Table>
         <TableHeader>
           <TableRow>
@@ -34,7 +35,7 @@ export default async function AreasPage() {
               <TableCell>{a.capacity ?? '—'}</TableCell>
               <TableCell>{a.bookable ? 'Yes' : 'No'}</TableCell>
               <TableCell className="text-right">
-                <Link href={`/areas/${a.id}/cells`} className="mr-4 text-sm underline">Edit cells on map</Link>
+                <Link href={`/areas/${a.id}/shape`} className="mr-4 text-sm underline">{a.geometry ? 'Edit shape on map' : 'Draw on map'}</Link>
                 <details>
                   <summary className="cursor-pointer text-sm underline">Edit</summary>
                   <form action={updateAreaAction} className="mt-2 space-y-2 text-left">
