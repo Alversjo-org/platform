@@ -10,6 +10,10 @@ export class BudgetVersionNotEditableError extends Error {
   constructor(id: string) { super(`Budget version ${id} is not the current draft`); this.name = 'BudgetVersionNotEditableError'; }
 }
 
+export class BudgetAmountNotFoundError extends Error {
+  constructor(id: string) { super(`No budget line ${id}`); this.name = 'BudgetAmountNotFoundError'; }
+}
+
 export class DraftNotEmptyError extends Error {
   constructor(id: string) { super(`Budget draft ${id} already has lines — import only seeds an empty draft`); this.name = 'DraftNotEmptyError'; }
 }
@@ -83,7 +87,6 @@ export function listBudgetAmounts(db: Db, annualBudgetId: string): Promise<Budge
 export async function upsertBudgetAmount(db: Db, input: BudgetAmountInput): Promise<BudgetAmount> {
   await requireDraft(db, input.annualBudgetId);
   const fields = {
-    annualBudgetId: input.annualBudgetId,
     description: input.description,
     projectGroupId: input.projectGroupId,
     projectId: input.projectId,
@@ -95,10 +98,14 @@ export async function upsertBudgetAmount(db: Db, input: BudgetAmountInput): Prom
   };
 
   if (input.id) {
+    const [existing] = await db.select().from(schema.budgetAmount).where(eq(schema.budgetAmount.id, input.id));
+    if (!existing || existing.annualBudgetId !== input.annualBudgetId) throw new BudgetAmountNotFoundError(input.id);
+    // annualBudgetId is deliberately not in `fields`/the SET clause — a line can never be
+    // reassigned to a different version than the one it was loaded from above.
     const [row] = await db.update(schema.budgetAmount).set(fields).where(eq(schema.budgetAmount.id, input.id)).returning();
     return row;
   }
-  const [row] = await db.insert(schema.budgetAmount).values({ id: randomUUID(), ...fields }).returning();
+  const [row] = await db.insert(schema.budgetAmount).values({ id: randomUUID(), annualBudgetId: input.annualBudgetId, ...fields }).returning();
   return row;
 }
 

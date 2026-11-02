@@ -63,4 +63,31 @@ describe('parseBudgetCsv', () => {
     const { lines } = parseBudgetCsv(SAMPLE);
     expect(lines.find((l) => l.description === 'tax 20.6%')).toMatchObject({ amountSek: 24_130_634 });
   });
+
+  it('strips space-grouped thousands instead of silently truncating the amount', () => {
+    const { lines } = parseBudgetCsv('YEAR,2026\nCOSTS,\nRent,"1 171 390"');
+    expect(lines.find((l) => l.description === 'Rent')).toMatchObject({ amountSek: 117_139_000 });
+  });
+
+  it('treats a lone decimal comma as a decimal point', () => {
+    const { lines } = parseBudgetCsv('YEAR,2026\nCOSTS,\nRent,"241306,34"');
+    expect(lines.find((l) => l.description === 'Rent')).toMatchObject({ amountSek: 24_130_634 });
+  });
+
+  it('throws instead of truncating a non-numeric amount at its first non-digit character', () => {
+    expect(() => parseBudgetCsv('YEAR,2026\nCOSTS,\nRent,12abc')).toThrow(InvalidBudgetCsvError);
+  });
+
+  it('throws on an amount with ambiguous grouping (more than one comma)', () => {
+    expect(() => parseBudgetCsv('YEAR,2026\nCOSTS,\nRent,"1,171,390"')).toThrow(InvalidBudgetCsvError);
+  });
+
+  it('throws when no budget lines were found at all', () => {
+    expect(() => parseBudgetCsv('YEAR,2026\nTotal Costs,0')).toThrow(InvalidBudgetCsvError);
+  });
+
+  it('throws when no COSTS/REVENUE/RESULT section marker was recognized, instead of silently filing every line as allocation', () => {
+    // Swedish headers instead of the English ones this parser recognizes — exactly the "shape varies" case.
+    expect(() => parseBudgetCsv('YEAR,2026\nKOSTNADER,\nEl,50000\nINTÄKTER,\nMedlemsavgifter,330000')).toThrow(InvalidBudgetCsvError);
+  });
 });

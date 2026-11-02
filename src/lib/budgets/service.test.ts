@@ -67,6 +67,24 @@ describe('budgets service', () => {
     expect(await listBudgetAmounts(db, draft.id)).toMatchObject([{ id: line.id, amountSek: 15_000_00 }]);
   });
 
+  it('rejects updating a line by passing a different annualBudgetId, instead of reassigning it out from under its real version', async () => {
+    const group = await seedGroup(db);
+    const v1 = await getOrCreateDraft(db, 2027);
+    const line = await upsertBudgetAmount(db, { annualBudgetId: v1.id, description: 'Electricity', projectGroupId: group.id, projectId: null, kind: 'cost', month: null, amountSek: 10_000_00, accountFrom: null, accountTo: null });
+    await approveBudget(db, { annualBudgetId: v1.id, actorUserId: 'u1' });
+    const v2 = await getOrCreateDraft(db, 2027);
+    await expect(upsertBudgetAmount(db, { id: line.id, annualBudgetId: v2.id, description: 'Tampered', projectGroupId: group.id, projectId: null, kind: 'cost', month: null, amountSek: 1, accountFrom: null, accountTo: null }))
+      .rejects.toThrow();
+    // The approved v1's line must be untouched — "a version is immutable once approved".
+    expect(await listBudgetAmounts(db, v1.id)).toMatchObject([{ id: line.id, description: 'Electricity', amountSek: 10_000_00 }]);
+  });
+
+  it('rejects updating a line id that does not exist', async () => {
+    const draft = await getOrCreateDraft(db, 2027);
+    await expect(upsertBudgetAmount(db, { id: 'nope', annualBudgetId: draft.id, description: 'X', projectGroupId: null, projectId: null, kind: 'cost', month: null, amountSek: 1, accountFrom: null, accountTo: null }))
+      .rejects.toThrow();
+  });
+
   it('deleteBudgetAmount removes a line from the draft', async () => {
     const draft = await getOrCreateDraft(db, 2027);
     const line = await upsertBudgetAmount(db, { annualBudgetId: draft.id, description: 'X', projectGroupId: null, projectId: null, kind: 'cost', month: null, amountSek: 1, accountFrom: null, accountTo: null });

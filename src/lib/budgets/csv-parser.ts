@@ -9,6 +9,17 @@ export class InvalidBudgetCsvError extends Error {
   constructor(message: string) { super(message); this.name = 'InvalidBudgetCsvError'; }
 }
 
+/** Strips space/NBSP thousands grouping and a lone decimal comma, then requires a clean number — never guesses on an ambiguous or partially-numeric value. */
+function parseAmount(raw: string, label: string): number {
+  let normalized = raw.trim().replace(/[\s ]/g, '');
+  const commaCount = (normalized.match(/,/g) ?? []).length;
+  if (commaCount === 1) normalized = normalized.replace(',', '.');
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
+    throw new InvalidBudgetCsvError(`Invalid amount for row "${label}": ${raw}`);
+  }
+  return Number.parseFloat(normalized);
+}
+
 export function parseBudgetCsv(csvText: string): ParsedBudgetCsv {
   const rows = parseCsv(csvText);
   const [yearLabel, yearRaw] = rows[0] ?? [];
@@ -21,13 +32,14 @@ export function parseBudgetCsv(csvText: string): ParsedBudgetCsv {
   const skippedTotalLabels: string[] = [];
   let currentKind: BudgetLineKind = 'allocation';
   let currentGroup: string | null = null;
+  let sawSectionMarker = false;
 
   for (const [label, amountRaw] of rows.slice(1)) {
     const normalized = label.trim().toLowerCase();
 
-    if (normalized === 'costs') { currentKind = 'cost'; currentGroup = null; continue; }
-    if (normalized === 'revenue' || normalized === 'income') { currentKind = 'income'; currentGroup = null; continue; }
-    if (normalized === 'result') { currentKind = 'allocation'; currentGroup = null; continue; }
+    if (normalized === 'costs') { currentKind = 'cost'; currentGroup = null; sawSectionMarker = true; continue; }
+    if (normalized === 'revenue' || normalized === 'income') { currentKind = 'income'; currentGroup = null; sawSectionMarker = true; continue; }
+    if (normalized === 'result') { currentKind = 'allocation'; currentGroup = null; sawSectionMarker = true; continue; }
 
     if (normalized.startsWith('total')) {
       skippedTotalLabels.push(label.trim());
@@ -39,11 +51,12 @@ export function parseBudgetCsv(csvText: string): ParsedBudgetCsv {
       continue;
     }
 
-    const amount = Number.parseFloat(amountRaw);
-    if (Number.isNaN(amount)) throw new InvalidBudgetCsvError(`Invalid amount for row "${label}": ${amountRaw}`);
-
-    lines.push({ description: label.trim(), kind: currentKind, groupName: currentGroup, amountSek: sekToOre(amount) });
+    const amountSek = sekToOre(parseAmount(amountRaw, label));
+    lines.push({ description: label.trim(), kind: currentKind, groupName: currentGroup, amountSek });
   }
+
+  if (lines.length === 0) throw new InvalidBudgetCsvError('No budget lines found in the CSV');
+  if (!sawSectionMarker) throw new InvalidBudgetCsvError('No COSTS, REVENUE/INCOME or RESULT section header was recognized — check the CSV\'s section labels');
 
   return { fiscalYear, lines, skippedTotalLabels };
 }
