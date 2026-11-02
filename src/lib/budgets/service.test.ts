@@ -101,21 +101,41 @@ describe('budgets service', () => {
     expect(await listBudgetAmounts(db, draft.id)).toEqual([]);
   });
 
-  it('approveBudget freezes the draft and copying forward starts a new draft that supersedes it on its own approval', async () => {
-    const group = await seedGroup(db);
+  it('copying forward carries every group\'s line, not just the one being revised, through several revisions', async () => {
+    const infra = await seedGroup(db, 'Infrastructure');
+    const kitchen = await seedGroup(db, 'Kitchen');
+
     const v1 = await getOrCreateDraft(db, 2027);
-    await upsertBudgetAmount(db, { annualBudgetId: v1.id, description: 'Electricity', projectGroupId: group.id, projectId: null, kind: 'cost', month: null, amountSek: 10_000_00, accountFrom: null, accountTo: null });
+    await upsertBudgetAmount(db, { annualBudgetId: v1.id, description: 'Electricity', projectGroupId: infra.id, projectId: null, kind: 'cost', month: null, amountSek: 10_000_00, accountFrom: null, accountTo: null });
+    await upsertBudgetAmount(db, { annualBudgetId: v1.id, description: 'Groceries', projectGroupId: kitchen.id, projectId: null, kind: 'cost', month: null, amountSek: 5_000_00, accountFrom: null, accountTo: null });
     await approveBudget(db, { annualBudgetId: v1.id, actorUserId: 'u1' });
 
-    const v2 = await getOrCreateDraft(db, 2027); // revising: should copy v1's line forward
+    // Revise: only Infrastructure's line changes. Kitchen's must still survive the copy-forward.
+    const v2 = await getOrCreateDraft(db, 2027);
     expect(v2.id).not.toBe(v1.id);
     expect(v2).toMatchObject({ version: 2, status: 'draft' });
-    expect(await listBudgetAmounts(db, v2.id)).toMatchObject([{ projectGroupId: group.id, amountSek: 10_000_00 }]);
-
+    const v2Lines = await listBudgetAmounts(db, v2.id);
+    expect(v2Lines).toHaveLength(2);
+    const v2Infra = v2Lines.find((l) => l.projectGroupId === infra.id)!;
+    expect(v2Lines.find((l) => l.projectGroupId === kitchen.id)).toMatchObject({ amountSek: 5_000_00 });
+    await upsertBudgetAmount(db, { id: v2Infra.id, annualBudgetId: v2.id, description: 'Electricity', projectGroupId: infra.id, projectId: null, kind: 'cost', month: null, amountSek: 12_000_00, accountFrom: null, accountTo: null });
     await approveBudget(db, { annualBudgetId: v2.id, actorUserId: 'u1' });
+
+    // Revise again: a second copy-forward must carry v2's edited Infrastructure amount AND
+    // the still-untouched Kitchen line, and approving it must supersede only v2 — v1 must stay
+    // superseded (not reset) and still be queryable, not dropped from listVersions.
+    const v3 = await getOrCreateDraft(db, 2027);
+    const v3Lines = await listBudgetAmounts(db, v3.id);
+    expect(v3Lines).toHaveLength(2);
+    expect(v3Lines.find((l) => l.projectGroupId === infra.id)).toMatchObject({ amountSek: 12_000_00 });
+    expect(v3Lines.find((l) => l.projectGroupId === kitchen.id)).toMatchObject({ amountSek: 5_000_00 });
+    await approveBudget(db, { annualBudgetId: v3.id, actorUserId: 'u1' });
+
     const versions = await listVersions(db, 2027);
+    expect(versions).toHaveLength(3);
     expect(versions.find((v) => v.id === v1.id)?.status).toBe('superseded');
-    expect(versions.find((v) => v.id === v2.id)?.status).toBe('approved');
+    expect(versions.find((v) => v.id === v2.id)?.status).toBe('superseded');
+    expect(versions.find((v) => v.id === v3.id)?.status).toBe('approved');
   });
 
   it('rejects editing a version that is not the current draft', async () => {
@@ -163,6 +183,21 @@ describe('budgets service', () => {
   it('rejects importing into a draft that already has lines', async () => {
     await importBudgetCsv(db, SAMPLE);
     await expect(importBudgetCsv(db, SAMPLE)).rejects.toBeInstanceOf(DraftNotEmptyError);
+  });
+
+  it('does not leave an orphan draft behind when importing into a year that already has an approved budget', async () => {
+    const group = await seedGroup(db);
+    const v1 = await getOrCreateDraft(db, 2026); // SAMPLE's fiscal year
+    await upsertBudgetAmount(db, { annualBudgetId: v1.id, description: 'Existing', projectGroupId: group.id, projectId: null, kind: 'cost', month: null, amountSek: 500, accountFrom: null, accountTo: null });
+    await approveBudget(db, { annualBudgetId: v1.id, actorUserId: 'u1' });
+
+    // getOrCreateDraft would start a v2 draft (copying v1's line forward) before the
+    // not-empty check fires — that side effect must not survive the rejected import.
+    await expect(importBudgetCsv(db, SAMPLE)).rejects.toBeInstanceOf(DraftNotEmptyError);
+
+    const versions = await listVersions(db, 2026);
+    expect(versions).toHaveLength(1);
+    expect(versions[0].id).toBe(v1.id);
   });
 });
 

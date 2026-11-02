@@ -160,39 +160,46 @@ export type ImportBudgetCsvResult = { annualBudget: AnnualBudget; linesImported:
 
 export async function importBudgetCsv(db: Db, csvText: string): Promise<ImportBudgetCsvResult> {
   const parsed = parseBudgetCsv(csvText);
-  const draft = await getOrCreateDraft(db, parsed.fiscalYear);
 
-  const existingLines = await listBudgetAmounts(db, draft.id);
-  if (existingLines.length > 0) throw new DraftNotEmptyError(draft.id);
+  // One transaction for the whole import: getOrCreateDraft's own copy-forward (when the latest
+  // version for this fiscal year is already approved) is a side effect that must not survive a
+  // rejected import — e.g. the DraftNotEmptyError below, once that copy-forward has made the
+  // fresh draft non-empty.
+  return db.transaction(async (tx) => {
+    const draft = await getOrCreateDraft(tx, parsed.fiscalYear);
 
-  const existingGroupNames = new Set((await db.select().from(schema.projectGroup)).map((g) => g.name.toLowerCase()));
-  const createdGroupNames = new Set<string>();
+    const existingLines = await listBudgetAmounts(tx, draft.id);
+    if (existingLines.length > 0) throw new DraftNotEmptyError(draft.id);
 
-  for (const line of parsed.lines) {
-    let projectGroupId: string | null = null;
-    if (line.groupName) {
-      const group = await findOrCreateProjectGroupByName(db, line.groupName);
-      projectGroupId = group.id;
-      const key = line.groupName.toLowerCase();
-      if (!existingGroupNames.has(key)) createdGroupNames.add(key);
+    const existingGroupNames = new Set((await tx.select().from(schema.projectGroup)).map((g) => g.name.toLowerCase()));
+    const createdGroupNames = new Set<string>();
+
+    for (const line of parsed.lines) {
+      let projectGroupId: string | null = null;
+      if (line.groupName) {
+        const group = await findOrCreateProjectGroupByName(tx, line.groupName);
+        projectGroupId = group.id;
+        const key = line.groupName.toLowerCase();
+        if (!existingGroupNames.has(key)) createdGroupNames.add(key);
+      }
+      await upsertBudgetAmount(tx, {
+        annualBudgetId: draft.id,
+        description: line.description,
+        projectGroupId,
+        projectId: null,
+        kind: line.kind,
+        month: null,
+        amountSek: line.amountSek,
+        accountFrom: null,
+        accountTo: null,
+      });
     }
-    await upsertBudgetAmount(db, {
-      annualBudgetId: draft.id,
-      description: line.description,
-      projectGroupId,
-      projectId: null,
-      kind: line.kind,
-      month: null,
-      amountSek: line.amountSek,
-      accountFrom: null,
-      accountTo: null,
-    });
-  }
 
-  return {
-    annualBudget: draft,
-    linesImported: parsed.lines.length,
-    groupsCreated: createdGroupNames.size,
-    skippedTotalLabels: parsed.skippedTotalLabels,
-  };
+    return {
+      annualBudget: draft,
+      linesImported: parsed.lines.length,
+      groupsCreated: createdGroupNames.size,
+      skippedTotalLabels: parsed.skippedTotalLabels,
+    };
+  });
 }
