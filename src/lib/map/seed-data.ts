@@ -1,19 +1,20 @@
 /**
- * Starting polygons, hand-estimated by eye against public/map/alversjo.jpg
- * and the lettered reference map described in the design doc (§6). Rough
- * drafts, not survey-accurate — meant to be refined later via the
- * /areas/[id]/cells editor.
+ * Starting outlines for the eleven sections, as open rings of [lon, lat] (WGS84).
+ *
+ * Originally hand-estimated by eye on the old map image (design doc §6), then converted to real
+ * coordinates on 2026-11-02 with the image georeference in legacy-image.ts. Rough drafts, not
+ * survey-accurate — meant to be redrawn in the /areas/[id]/shape editor.
  */
-export const SEED_AREAS: Array<{ id: string; name: string; polygon: Array<[number, number]> }> = [
-  { id: 'section-a', name: 'A', polygon: [[0.262, 0.479], [0.282, 0.5], [0.268, 0.564], [0.245, 0.629], [0.188, 0.635], [0.202, 0.544], [0.228, 0.496]] },
-  { id: 'section-b', name: 'B', polygon: [[0.42, 0.766], [0.58, 0.766], [0.63, 0.798], [0.6, 0.9], [0.5, 0.97], [0.4, 0.9], [0.38, 0.798]] },
-  { id: 'section-c', name: 'C', polygon: [[0.37, 0.33], [0.46, 0.32], [0.47, 0.38], [0.42, 0.39], [0.40, 0.40], [0.36, 0.38]] },
-  { id: 'section-c1', name: 'C1', polygon: [[0.67, 0.439], [0.701, 0.423], [0.718, 0.425], [0.692, 0.449]] },
-  { id: 'section-d', name: 'D', polygon: [[0.701, 0.423], [0.775, 0.437], [0.746, 0.475], [0.695, 0.483], [0.675, 0.459]] },
-  { id: 'section-e', name: 'E', polygon: [[0.36, 0.39], [0.47, 0.38], [0.48, 0.44], [0.37, 0.45]] },
-  { id: 'section-f', name: 'F', polygon: [[0.37, 0.45], [0.48, 0.44], [0.49, 0.49], [0.38, 0.50]] },
-  { id: 'section-g', name: 'G', polygon: [[0.48, 0.44], [0.60, 0.42], [0.63, 0.50], [0.55, 0.56], [0.48, 0.52], [0.49, 0.49]] },
-  { id: 'section-h', name: 'Sunny Hills', polygon: [[0.228, 0.624], [0.444, 0.624], [0.444, 0.766], [0.228, 0.766]] },
-  { id: 'section-t', name: 'Downtown', polygon: [[0.399, 0.637], [0.541, 0.637], [0.541, 0.745], [0.399, 0.745]] },
-  { id: 'section-i', name: 'Bison', polygon: [[0.541, 0.637], [0.684, 0.637], [0.684, 0.725], [0.541, 0.725]] },
+export const SEED_AREAS: Array<{ id: string; name: string; ring: Array<[number, number]> }> = [
+  { id: 'section-a', name: 'A', ring: [[14.919207, 57.626726], [14.919885, 57.626187], [14.919409, 57.624548], [14.918628, 57.622883], [14.916695, 57.622731], [14.917171, 57.625062], [14.918054, 57.626291]] },
+  { id: 'section-b', name: 'B', ring: [[14.924561, 57.619369], [14.929987, 57.619365], [14.931682, 57.618544], [14.930663, 57.615932], [14.92727, 57.614141], [14.92388, 57.615936], [14.923204, 57.61855]] },
+  { id: 'section-c', name: 'C', ring: [[14.922872, 57.630541], [14.925924, 57.630795], [14.926262, 57.629257], [14.924567, 57.629002], [14.923888, 57.628746], [14.922532, 57.62926]] },
+  { id: 'section-c1', name: 'C1', ring: [[14.933044, 57.627741], [14.934095, 57.62815], [14.934672, 57.628098], [14.93379, 57.627484]] },
+  { id: 'section-d', name: 'D', ring: [[14.934095, 57.62815], [14.936605, 57.627789], [14.935621, 57.626817], [14.933891, 57.626613], [14.933213, 57.627228]] },
+  { id: 'section-e', name: 'E', ring: [[14.922532, 57.629004], [14.926262, 57.629257], [14.926601, 57.62772], [14.92287, 57.627466]] },
+  { id: 'section-f', name: 'F', ring: [[14.92287, 57.627466], [14.926601, 57.62772], [14.926939, 57.626438], [14.923208, 57.626185]] },
+  { id: 'section-g', name: 'G', ring: [[14.926601, 57.62772], [14.93067, 57.628229], [14.931686, 57.626179], [14.928972, 57.624644], [14.926599, 57.62567], [14.926939, 57.626438]] },
+  { id: 'section-h', name: 'Sunny Hills', ring: [[14.918052, 57.623012], [14.925377, 57.623007], [14.925375, 57.619368], [14.91805, 57.619374]] },
+  { id: 'section-t', name: 'Downtown', ring: [[14.923851, 57.622675], [14.928666, 57.622671], [14.928664, 57.619904], [14.923849, 57.619908]] },
+  { id: 'section-i', name: 'Bison', ring: [[14.928666, 57.622671], [14.933515, 57.622668], [14.933514, 57.620413], [14.928665, 57.620417]] },
 ];

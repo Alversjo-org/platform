@@ -22,7 +22,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
   const displayName = profile?.nickname || name || user.email;
 
   return (
-    <div className="mx-auto max-w-5xl p-6">
+    <div className="mx-auto w-full min-w-0 max-w-5xl p-6">
       <header className="space-y-2">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
@@ -51,7 +51,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <nav className="flex items-center gap-4">
+        <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link href="/events" className="text-sm text-muted-foreground hover:text-foreground">Events</Link>
           <Link href="/map" className="text-sm text-muted-foreground hover:text-foreground">Map</Link>
           <Link href="/boxes" className="text-sm text-muted-foreground hover:text-foreground">Boxes</Link>

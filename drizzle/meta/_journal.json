@@ -82,15 +82,29 @@
     {
       "idx": 11,
       "version": "7",
-      "when": 1793627489318,
-      "tag": "0011_spooky_scrambler",
+      "when": 1793630982373,
+      "tag": "0011_area_geometry",
       "breakpoints": true
     },
     {
       "idx": 12,
       "version": "7",
-      "when": 1793636117200,
-      "tag": "0012_glorious_storm",
+      "when": 1793634320056,
+      "tag": "0012_map_feature",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793634334153,
+      "tag": "0013_map_feature_initial_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793636792815,
+      "tag": "0014_special_psynapse",
       "breakpoints": true
     }
   ]

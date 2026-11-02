@@ -1,71 +1,30 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cellRect } from '@/lib/map/grid';
-import { GRID_COLS, GRID_ROWS, MAP_IMAGE_SRC } from '@/lib/map/constants';
+import type { MapFeatureData } from '@/lib/map/features';
 import type { MapAreaData } from '@/lib/map/view-model';
 
-function centroid(cells: Array<{ col: number; row: number }>): { x: number; y: number } {
-  let sumX = 0;
-  let sumY = 0;
-  for (const { col, row } of cells) {
-    const r = cellRect(col, row);
-    sumX += (r.x0 + r.x1) / 2;
-    sumY += (r.y0 + r.y1) / 2;
-  }
-  return { x: sumX / cells.length, y: sumY / cells.length };
-}
+// Leaflet needs `window`, and keeping it out of the server bundle means only map pages download it.
+const MapViewLeaflet = dynamic(() => import('./map-view-leaflet'), {
+  ssr: false,
+  loading: () => <div className="h-[70vh] min-h-[400px] w-full animate-pulse rounded-md border bg-muted" />,
+});
 
-export function MapView({ areas }: { areas: MapAreaData[] }) {
+export function MapView({ areas, features, canEditFeatures }: { areas: MapAreaData[]; features: MapFeatureData[]; canEditFeatures: boolean }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = areas.find((a) => a.id === selectedId) ?? null;
-  const cellWidth = 1 / GRID_COLS;
-  const cellHeight = 1 / GRID_ROWS;
 
   return (
     <div>
       {areas.length === 0 && (
         <p className="mb-4 text-sm text-muted-foreground">
-          No sections have been mapped yet — check back soon, or ask an admin to assign grid cells to an area under &quot;Areas&quot;.
+          No sections have been mapped yet — check back soon, or ask a mapper to draw an area under &quot;Areas&quot;.
         </p>
       )}
-      <div className="relative w-full">
-        <img src={MAP_IMAGE_SRC} alt="Alversjö map" className="w-full" />
-        <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-          <defs>
-            <pattern id="map-grid" width={cellWidth} height={cellHeight} patternUnits="userSpaceOnUse">
-              <rect width={cellWidth} height={cellHeight} fill="none" stroke="white" strokeOpacity={0.3} strokeWidth={0.0005} />
-            </pattern>
-          </defs>
-          <rect width="1" height="1" fill="url(#map-grid)" />
-          {areas.map((area) => {
-            const { x, y } = centroid(area.cells);
-            return (
-              <g key={area.id} onClick={() => setSelectedId(area.id)} style={{ cursor: 'pointer' }}>
-                {area.cells.map((cell) => {
-                  const r = cellRect(cell.col, cell.row);
-                  return (
-                    <rect
-                      key={`${cell.col},${cell.row}`}
-                      x={r.x0}
-                      y={r.y0}
-                      width={r.x1 - r.x0}
-                      height={r.y1 - r.y0}
-                      fill={area.color}
-                      fillOpacity={selectedId === area.id ? 0.55 : 0.35}
-                    />
-                  );
-                })}
-                <text x={x} y={y} fontSize={0.012} textAnchor="middle" fill="white" stroke="black" strokeWidth={0.0015} paintOrder="stroke">
-                  {area.name}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
+      <MapViewLeaflet areas={areas} features={features} canEditFeatures={canEditFeatures} selectedId={selectedId} onSelect={setSelectedId} />
       {selected && (
         <Card className="mt-4">
           <CardHeader>
@@ -92,6 +51,11 @@ export function MapView({ areas }: { areas: MapAreaData[] }) {
           </CardContent>
         </Card>
       )}
+      <p className="mt-2 text-xs text-muted-foreground">
+        Map data as GeoJSON (for QGIS, Google Earth, …): <a href="/map/areas.geojson" className="underline">areas</a>,{' '}
+        <a href="/map/features.geojson" className="underline">places, borders and other features</a>
+        {canEditFeatures && <> · <Link href="/map/features" className="underline">Edit map features</Link></>}
+      </p>
     </div>
   );
 }

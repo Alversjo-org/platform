@@ -1,5 +1,5 @@
 {
-  "id": "15c7f926-49ad-4133-a044-f97a92539281",
+  "id": "5c0449c7-d2ee-4dd0-907f-2ba198f73b3d",
   "prevId": "a44c12b9-58e9-4304-97ad-130cbe3388e6",
   "version": "7",
   "dialect": "postgresql",
@@ -230,6 +230,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "geometry": {
+          "name": "geometry",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1825,90 +1831,6 @@
           "tableTo": "user",
           "columnsFrom": [
             "updated_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.role_request": {
-      "name": "role_request",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "requested_at": {
-          "name": "requested_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "decided_by_user_id": {
-          "name": "decided_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "decided_at": {
-          "name": "decided_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "role_request_user_id_user_id_fk": {
-          "name": "role_request_user_id_user_id_fk",
-          "tableFrom": "role_request",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "role_request_decided_by_user_id_user_id_fk": {
-          "name": "role_request_decided_by_user_id_user_id_fk",
-          "tableFrom": "role_request",
-          "tableTo": "user",
-          "columnsFrom": [
-            "decided_by_user_id"
           ],
           "columnsTo": [
             "id"
