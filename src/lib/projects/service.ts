@@ -76,6 +76,15 @@ export async function updateProjectMeta(db: Db, input: { projectId: string; titl
   return row;
 }
 
+export async function setProjectGroup(db: Db, input: { projectId: string; projectGroupId: string | null }): Promise<Project> {
+  const [row] = await db.update(schema.project)
+    .set({ projectGroupId: input.projectGroupId, updatedAt: new Date() })
+    .where(eq(schema.project.id, input.projectId))
+    .returning();
+  if (!row) throw new ProjectNotFoundError(input.projectId);
+  return row;
+}
+
 export async function duplicateEvent(db: Db, input: { sourceProjectId: string; actorUserId: string }): Promise<Project> {
   const [owner] = await db.select().from(schema.user).where(eq(schema.user.id, input.actorUserId));
   if (!owner?.canCreateEvents) throw new EventCreationBlockedError(input.actorUserId);

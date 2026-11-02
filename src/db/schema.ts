@@ -1,4 +1,5 @@
 import { boolean, index, integer, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer';
 export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
@@ -8,6 +9,8 @@ export type ProjectStatus = 'draft' | 'published' | 'cancelled' | 'closed' | 'ar
 export type ProjectVisibility = 'members' | 'public';
 export type ProjectMemberRole = 'lead' | 'cocreator';
 export type SignupStatus = 'going' | 'waitlist' | 'cancelled';
+export type AnnualBudgetStatus = 'draft' | 'approved' | 'superseded';
+export type BudgetLineKind = 'cost' | 'income' | 'allocation'; // allocation: a plan for the year's surplus (loan repayment, reserves, ...) — not a cost or income line, excluded from the Result computation
 
 // BetterAuth core tables. Field names (TS keys) must match BetterAuth's model
 // fields; column names are ours.
@@ -123,6 +126,7 @@ export const project = pgTable('project', {
   visibility: text('visibility', { enum: ['members', 'public'] }).$type<ProjectVisibility>().notNull().default('members'),
   ownerUserId: text('owner_user_id').notNull().references(() => user.id),
   publishedAt: timestamp('published_at'), // set once, on draft->published; drives the signup-window default (spec §5: "open from publishing until the start")
+  projectGroupId: text('project_group_id').references((): AnyPgColumn => projectGroup.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -271,6 +275,38 @@ export const fxSyncState = pgTable('fx_sync_state', {
   lastFullSyncAt: timestamp('last_full_sync_at'),
 });
 
+export const projectGroup = pgTable('project_group', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  costCentreCode: text('cost_centre_code').unique().references(() => fxCostCentre.code),
+  parentId: text('parent_id').references((): AnyPgColumn => projectGroup.id),
+});
+
+export const annualBudget = pgTable('annual_budget', {
+  id: text('id').primaryKey(),
+  fiscalYear: integer('fiscal_year').notNull(), // assumed calendar year — see the design doc's open question
+  version: integer('version').notNull(),
+  status: text('status', { enum: ['draft', 'approved', 'superseded'] }).$type<AnnualBudgetStatus>().notNull().default('draft'),
+  approvedByUserId: text('approved_by_user_id').references(() => user.id),
+  approvedAt: timestamp('approved_at'),
+  note: text('note'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [unique('annual_budget_year_version_key').on(t.fiscalYear, t.version)]);
+
+export const budgetAmount = pgTable('budget_amount', {
+  id: text('id').primaryKey(),
+  annualBudgetId: text('annual_budget_id').notNull().references(() => annualBudget.id, { onDelete: 'cascade' }),
+  description: text('description').notNull().default(''), // what this line is, e.g. "Electricity", "Rainy Day Fund" — required at the form layer, not the DB
+  projectGroupId: text('project_group_id').references(() => projectGroup.id), // nullable: an allocation line, or any line nobody's grouped yet, has none
+  projectId: text('project_id').references(() => project.id),
+  kind: text('kind', { enum: ['cost', 'income', 'allocation'] }).$type<BudgetLineKind>().notNull(),
+  month: integer('month'), // 1-12, null = whole-year line
+  amountSek: integer('amount_sek').notNull(), // öre, despite the name — platform-wide convention
+  accountFrom: integer('account_from'),
+  accountTo: integer('account_to'),
+  createdAt: timestamp('created_at').notNull().defaultNow(), // stable list order — an edit must not change a row's position
+});
+
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type UserRole = typeof userRole.$inferSelect;
@@ -283,3 +319,6 @@ export type AreaGridCell = typeof areaGridCell.$inferSelect;
 export type EventArea = typeof eventArea.$inferSelect;
 export type EventSignup = typeof eventSignup.$inferSelect;
 export type DecisionLog = typeof decisionLog.$inferSelect;
+export type ProjectGroup = typeof projectGroup.$inferSelect;
+export type AnnualBudget = typeof annualBudget.$inferSelect;
+export type BudgetAmount = typeof budgetAmount.$inferSelect;
