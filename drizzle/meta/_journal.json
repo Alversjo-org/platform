@@ -99,6 +99,13 @@
       "when": 1793634334153,
       "tag": "0013_map_feature_initial_data",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793636792815,
+      "tag": "0014_special_psynapse",
+      "breakpoints": true
     }
   ]
 }

@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getDb } from '@/db';
 import { listMembers } from '@/lib/members/service';
 import { ADMIN_ONLY_ROLES, ROLE_LABELS } from '@/lib/roles/labels';
+import { listPendingRoleRequests } from '@/lib/roles/request-service';
 import { GRANTABLE_ROLES, groupRolesByUserId, listUserRoles } from '@/lib/roles/service';
 import { hasAnyRole, requireRoleAdmin } from '@/lib/session';
-import { setUserRoleAction } from './actions';
+import { decideRoleRequestAction, setUserRoleAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,11 +19,46 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
   const members = await listMembers(db);
   const rolesByUserId = groupRolesByUserId(await listUserRoles(db));
   const canChangeAdminRoles = hasAnyRole(actor, ['admin']);
+  const pendingRequests = await listPendingRoleRequests(db);
 
   return (
     <AppShell user={actor}>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       <h1 className="mb-4 text-xl font-semibold">Roles</h1>
+      {pendingRequests.length > 0 && (
+        <>
+          <h2 className="mb-2 text-lg font-medium">Pending requests</h2>
+          <Table className="mb-6">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Requested</TableHead><TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingRequests.map((req) => (
+                <TableRow key={req.id}>
+                  <TableCell>{req.userName || '—'}</TableCell>
+                  <TableCell>{req.userEmail}</TableCell>
+                  <TableCell>{ROLE_LABELS[req.role]}</TableCell>
+                  <TableCell>{req.requestedAt.toLocaleDateString()}</TableCell>
+                  <TableCell className="flex gap-2">
+                    <form action={decideRoleRequestAction}>
+                      <input type="hidden" name="requestId" value={req.id} />
+                      <input type="hidden" name="approve" value="true" />
+                      <Button type="submit" size="sm" variant="outline">Approve</Button>
+                    </form>
+                    <form action={decideRoleRequestAction}>
+                      <input type="hidden" name="requestId" value={req.id} />
+                      <input type="hidden" name="approve" value="false" />
+                      <Button type="submit" size="sm" variant="ghost">Deny</Button>
+                    </form>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </>
+      )}
       <Table>
         <TableHeader>
           <TableRow>

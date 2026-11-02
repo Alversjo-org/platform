@@ -3,7 +3,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { FeatureKind } from '@/lib/map/feature-kinds';
 import type { AreaGeometry, FeatureGeometry } from '@/lib/map/geometry';
 
-export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer';
+export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer' | 'wiki-editor';
 export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
 export type BoxProfile = 'admin' | 'contributor';
 export type ProjectKind = 'event' | 'ongoing' | 'build' | 'purchase';
@@ -101,13 +101,27 @@ export const userRole = pgTable(
   'user_role',
   {
     userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
-    role: text('role', { enum: ['admin', 'member-admin', 'mapper', 'role-admin'] }).$type<Role>().notNull(),
+    role: text('role', { enum: ['admin', 'member-admin', 'mapper', 'role-admin', 'treasurer', 'wiki-editor'] }).$type<Role>().notNull(),
     // Null for the one-time ADMIN_EMAILS bootstrap grant and the migration backfill, neither of which has a human granter.
     grantedByUserId: text('granted_by_user_id').references(() => user.id),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.role] })],
 );
+
+export type RoleRequestStatus = 'pending' | 'approved' | 'denied';
+
+export const roleRequest = pgTable('role_request', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  role: text('role', { enum: ['admin', 'member-admin', 'mapper', 'role-admin', 'treasurer', 'wiki-editor'] }).$type<Role>().notNull(),
+  status: text('status', { enum: ['pending', 'approved', 'denied'] }).$type<RoleRequestStatus>().notNull().default('pending'),
+  requestedAt: timestamp('requested_at').notNull().defaultNow(),
+  decidedByUserId: text('decided_by_user_id').references(() => user.id),
+  decidedAt: timestamp('decided_at'),
+});
+
+export type RoleRequest = typeof roleRequest.$inferSelect;
 
 export const renewalMessageSetting = pgTable('renewal_message_setting', {
   id: text('id').primaryKey().default('default'),
@@ -326,6 +340,20 @@ export const budgetAmount = pgTable('budget_amount', {
   createdAt: timestamp('created_at').notNull().defaultNow(), // stable list order — an edit must not change a row's position
 });
 
+export type TaskStatus = 'backlog' | 'doing' | 'done';
+
+export const task = pgTable('task', {
+  id: text('id').primaryKey(),
+  description: text('description').notNull(),
+  status: text('status', { enum: ['backlog', 'doing', 'done'] }).$type<TaskStatus>().notNull().default('backlog'),
+  assigneeUserId: text('assignee_user_id').references(() => user.id),
+  createdByUserId: text('created_by_user_id').notNull().references(() => user.id),
+  projectId: text('project_id').references(() => project.id, { onDelete: 'cascade' }),
+  imageUrl: text('image_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type UserRole = typeof userRole.$inferSelect;
@@ -342,3 +370,4 @@ export type DecisionLog = typeof decisionLog.$inferSelect;
 export type ProjectGroup = typeof projectGroup.$inferSelect;
 export type AnnualBudget = typeof annualBudget.$inferSelect;
 export type BudgetAmount = typeof budgetAmount.$inferSelect;
+export type Task = typeof task.$inferSelect;
