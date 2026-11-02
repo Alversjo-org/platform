@@ -22,7 +22,8 @@ export const SITE_BBOX: [number, number, number, number] = [14.85, 57.58, 15.0, 
  */
 export const DRONE_2026 = {
   url: 'https://tiles.openaerialmap.org/6a82fe4909bfcbdf0ea094f2/0/6a82fe4909bfcbdf0ea094f3/{z}/{x}/{y}.png',
-  attribution: 'Drone imagery 2026 © Ebbe Valbak, <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY 4.0</a> via <a href="https://openaerialmap.org">OpenAerialMap</a>',
+  // Kept short: on a phone the attribution bar otherwise takes three lines of the map.
+  attribution: 'Drone 2026 © Ebbe Valbak, <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY</a>',
   // [[south, west], [north, east]] — no requests are made for tiles outside it.
   bounds: [[57.61466, 14.915173], [57.636085, 14.936187]] as [[number, number], [number, number]],
   maxNativeZoom: 21,
@@ -34,4 +35,4 @@ export const MAP_MAX_ZOOM = 22;
  * Attribution for the initial map features (migration 0013): taken from the Borderland placement
  * map and the alversjomaps sound guide, with the Borderland team's permission.
  */
-export const SITE_LAYERS_ATTRIBUTION = 'Site data: <a href="https://www.theborderland.se/map/">Borderland map</a>';
+export const SITE_LAYERS_ATTRIBUTION = '<a href="https://www.theborderland.se/map/">Borderland map</a>';
