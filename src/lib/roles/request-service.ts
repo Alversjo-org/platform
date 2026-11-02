@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { Role, RoleRequest } from '@/db/schema';
+import { logDecision } from '@/lib/decision-log';
 
 const SELF_REQUESTABLE_ROLES: Role[] = ['wiki-editor'];
 
@@ -9,6 +10,13 @@ export class RoleNotSelfRequestableError extends Error {
   constructor(role: Role) {
     super(`${role} cannot be self-requested`);
     this.name = 'RoleNotSelfRequestableError';
+  }
+}
+
+export class RequestNotPendingError extends Error {
+  constructor(requestId: string) {
+    super(`Role request ${requestId} is not pending`);
+    this.name = 'RequestNotPendingError';
   }
 }
 
@@ -42,4 +50,50 @@ export async function requestRole(db: Db, input: { userId: string; role: Role })
     .values({ id: randomUUID(), userId: input.userId, role: input.role })
     .returning();
   return created;
+}
+
+export type PendingRoleRequest = RoleRequest & { userEmail: string; userName: string | null };
+
+export async function listPendingRoleRequests(db: Db): Promise<PendingRoleRequest[]> {
+  const rows = await db
+    .select({
+      id: schema.roleRequest.id,
+      userId: schema.roleRequest.userId,
+      role: schema.roleRequest.role,
+      status: schema.roleRequest.status,
+      requestedAt: schema.roleRequest.requestedAt,
+      decidedByUserId: schema.roleRequest.decidedByUserId,
+      decidedAt: schema.roleRequest.decidedAt,
+      userEmail: schema.user.email,
+      userName: schema.user.name,
+    })
+    .from(schema.roleRequest)
+    .innerJoin(schema.user, eq(schema.user.id, schema.roleRequest.userId))
+    .where(eq(schema.roleRequest.status, 'pending'));
+  return rows;
+}
+
+export async function decideRoleRequest(db: Db, input: { actor: { id: string }; requestId: string; approve: boolean }): Promise<void> {
+  const [request] = await db.select().from(schema.roleRequest).where(eq(schema.roleRequest.id, input.requestId));
+  if (!request || request.status !== 'pending') throw new RequestNotPendingError(input.requestId);
+
+  if (input.approve) {
+    await db
+      .insert(schema.userRole)
+      .values({ userId: request.userId, role: request.role, grantedByUserId: input.actor.id })
+      .onConflictDoNothing();
+  }
+
+  await db
+    .update(schema.roleRequest)
+    .set({ status: input.approve ? 'approved' : 'denied', decidedByUserId: input.actor.id, decidedAt: new Date() })
+    .where(eq(schema.roleRequest.id, input.requestId));
+
+  await logDecision(db, {
+    entity: 'role_request',
+    entityId: input.requestId,
+    actorUserId: input.actor.id,
+    action: input.approve ? 'approve' : 'deny',
+    diff: { role: request.role, userId: request.userId },
+  });
 }
