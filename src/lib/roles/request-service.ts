@@ -3,8 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { Role, RoleRequest } from '@/db/schema';
 import { logDecision } from '@/lib/decision-log';
-
-const SELF_REQUESTABLE_ROLES: Role[] = ['wiki-editor'];
+import { SELF_REQUESTABLE_ROLES } from './labels';
 
 export class RoleNotSelfRequestableError extends Error {
   constructor(role: Role) {
