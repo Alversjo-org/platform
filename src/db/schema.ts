@@ -1,5 +1,6 @@
-import { boolean, index, integer, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+import type { AreaGeometry } from '@/lib/map/geometry';
 
 export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer';
 export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
@@ -157,6 +158,8 @@ export const area = pgTable('area', {
   description: text('description').notNull().default(''),
   capacity: integer('capacity'), // advisory only
   bookable: boolean('bookable').notNull().default(true),
+  // Outline on the map: GeoJSON Polygon/MultiPolygon in WGS84 ([lon, lat]). Null = not on the map.
+  geometry: jsonb('geometry').$type<AreaGeometry>(),
 });
 
 export const areaGridCell = pgTable('area_grid_cell', {

@@ -128,3 +128,12 @@
     @apply font-sans;
   }
 }
+/* Area names on the Leaflet map: plain outlined text, not the default tooltip bubble. */
+.leaflet-tooltip.map-area-label {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 0 3px #000, 0 0 2px #000;
+}
