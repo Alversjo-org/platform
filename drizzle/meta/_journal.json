@@ -78,6 +78,13 @@
       "when": 1793615501683,
       "tag": "0010_marvelous_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793627489318,
+      "tag": "0011_spooky_scrambler",
+      "breakpoints": true
     }
   ]
 }
