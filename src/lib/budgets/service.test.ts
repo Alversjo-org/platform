@@ -4,7 +4,7 @@ import type { BudgetAmount } from '@/db/schema';
 import { createProjectGroup, getProjectGroup, listProjectGroups } from '@/lib/project-groups/service';
 import {
   approveBudget, BudgetVersionNotEditableError, computeBudgetTotals, deleteBudgetAmount, DraftNotEmptyError,
-  getOrCreateDraft, importBudgetCsv, listBudgetAmounts, listVersions, upsertBudgetAmount,
+  getOrCreateDraft, importBudgetCsv, listBudgetAmounts, listVersions, parseFiscalYear, upsertBudgetAmount,
 } from './service';
 
 async function seedGroup(db: Db, name = 'Infrastructure') {
@@ -210,5 +210,23 @@ describe('computeBudgetTotals', () => {
       { kind: 'allocation', amountSek: 300_00 } as BudgetAmount,
     ]);
     expect(totals).toEqual({ totalCostSek: 1_500_00, totalIncomeSek: 2_000_00, totalAllocationSek: 300_00, resultSek: 500_00 });
+  });
+});
+
+describe('parseFiscalYear', () => {
+  it('accepts a valid year string', () => {
+    expect(parseFiscalYear('2027')).toBe(2027);
+  });
+
+  it('falls back to the current calendar year for a non-numeric value', () => {
+    expect(parseFiscalYear('abc')).toBe(new Date().getFullYear());
+  });
+
+  it('falls back to the current calendar year for an out-of-range value', () => {
+    expect(parseFiscalYear('99999')).toBe(new Date().getFullYear());
+  });
+
+  it('falls back to the current calendar year when undefined', () => {
+    expect(parseFiscalYear(undefined)).toBe(new Date().getFullYear());
   });
 });

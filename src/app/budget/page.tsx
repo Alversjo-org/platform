@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getDb } from '@/db';
 import type { BudgetAmount, BudgetLineKind, ProjectGroup } from '@/db/schema';
-import { computeBudgetTotals, getOrCreateDraft, listBudgetAmounts, listVersions } from '@/lib/budgets/service';
+import { computeBudgetTotals, listBudgetAmounts, listVersions, parseFiscalYear } from '@/lib/budgets/service';
 import { oreToSek } from '@/lib/money';
 import { listProjectGroups } from '@/lib/project-groups/service';
 import { requireTreasurer } from '@/lib/session';
-import { addLineAction, approveAction, deleteLineAction, updateLineAction } from './actions';
+import { addLineAction, approveAction, deleteLineAction, startDraftAction, updateLineAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,42 +98,63 @@ export default async function BudgetPage({ searchParams }: { searchParams: Promi
   const treasurer = await requireTreasurer();
   const db = await getDb();
   const { year, error, imported, groupsCreated } = await searchParams;
-  const fiscalYear = year ? Number(year) : new Date().getFullYear();
+  const fiscalYear = parseFiscalYear(year);
 
-  const draft = await getOrCreateDraft(db, fiscalYear);
-  const lines = await listBudgetAmounts(db, draft.id);
-  const totals = computeBudgetTotals(lines);
+  // Reading this page never creates or mutates a budget — getOrCreateDraft is only ever called
+  // from an explicit action (startDraftAction below, or the CSV import), never from a GET.
   const groups = await listProjectGroups(db);
   const versions = await listVersions(db, fiscalYear);
-  const priorVersions = versions.filter((v) => v.id !== draft.id);
+  const current = versions[0] ?? null; // newest by construction: draft or approved, never superseded
+  const priorVersions = versions.filter((v) => v.id !== current?.id);
+  const editable = current?.status === 'draft';
+  const currentLines = current ? await listBudgetAmounts(db, current.id) : [];
+  const totals = computeBudgetTotals(currentLines);
 
   return (
     <AppShell user={treasurer}>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Budget {fiscalYear}</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-semibold">Budget {fiscalYear}</h1>
+          <form method="get" action="/budget" className="flex items-center gap-2">
+            <Input name="year" type="number" defaultValue={fiscalYear} className="w-24" />
+            <Button type="submit" size="sm" variant="outline">Go</Button>
+          </form>
+        </div>
         <a href="/budget/import" className="text-sm underline">Import CSV</a>
       </div>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       {imported && <Alert className="mb-4"><AlertDescription>Imported {imported} lines, created {groupsCreated} new project groups.</AlertDescription></Alert>}
 
       <Card className="mb-6">
-        <CardHeader><CardTitle>Summary (draft v{draft.version})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Summary {current ? `(v${current.version}, ${current.status})` : '(no budget yet)'}</CardTitle></CardHeader>
         <CardContent>
           <p>Total cost: {oreToSek(totals.totalCostSek).toLocaleString('sv-SE')} kr</p>
           <p>Total income: {oreToSek(totals.totalIncomeSek).toLocaleString('sv-SE')} kr</p>
           <p>Result: {oreToSek(totals.resultSek).toLocaleString('sv-SE')} kr</p>
           <p>Total allocation: {oreToSek(totals.totalAllocationSek).toLocaleString('sv-SE')} kr</p>
-          <form action={approveAction} className="mt-4">
-            <input type="hidden" name="annualBudgetId" value={draft.id} />
-            <input type="hidden" name="fiscalYear" value={fiscalYear} />
-            <Button type="submit">Approve this budget</Button>
-          </form>
+          {editable && current && (
+            <form action={approveAction} className="mt-4">
+              <input type="hidden" name="annualBudgetId" value={current.id} />
+              <input type="hidden" name="fiscalYear" value={fiscalYear} />
+              <Button type="submit">Approve this budget</Button>
+            </form>
+          )}
+          {!editable && (
+            <form action={startDraftAction} className="mt-4">
+              <input type="hidden" name="fiscalYear" value={fiscalYear} />
+              <Button type="submit">{current ? 'Revise this budget' : `Start the ${fiscalYear} budget`}</Button>
+            </form>
+          )}
         </CardContent>
       </Card>
 
-      <LineSection kind="cost" lines={lines} groups={groups} annualBudgetId={draft.id} fiscalYear={fiscalYear} editable />
-      <LineSection kind="income" lines={lines} groups={groups} annualBudgetId={draft.id} fiscalYear={fiscalYear} editable />
-      <LineSection kind="allocation" lines={lines} groups={groups} annualBudgetId={draft.id} fiscalYear={fiscalYear} editable />
+      {current && (
+        <>
+          <LineSection kind="cost" lines={currentLines} groups={groups} annualBudgetId={current.id} fiscalYear={fiscalYear} editable={editable} />
+          <LineSection kind="income" lines={currentLines} groups={groups} annualBudgetId={current.id} fiscalYear={fiscalYear} editable={editable} />
+          <LineSection kind="allocation" lines={currentLines} groups={groups} annualBudgetId={current.id} fiscalYear={fiscalYear} editable={editable} />
+        </>
+      )}
 
       {await Promise.all(priorVersions.map(async (v) => {
         const versionLines = await listBudgetAmounts(db, v.id);

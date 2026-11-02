@@ -18,6 +18,13 @@ export class DraftNotEmptyError extends Error {
   constructor(id: string) { super(`Budget draft ${id} already has lines — import only seeds an empty draft`); this.name = 'DraftNotEmptyError'; }
 }
 
+/** A bad or out-of-range `?year=` falls back to the current calendar year rather than crashing. */
+export function parseFiscalYear(raw: string | undefined): number {
+  const year = raw ? Number(raw) : NaN;
+  if (Number.isInteger(year) && year >= 2000 && year <= 2100) return year;
+  return new Date().getFullYear();
+}
+
 export type BudgetAmountInput = {
   id?: string;
   annualBudgetId: string;

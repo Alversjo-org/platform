@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { getDb } from '@/db';
 import type { BudgetLineKind } from '@/db/schema';
 import {
-  approveBudget, BudgetVersionNotEditableError, deleteBudgetAmount, upsertBudgetAmount,
+  approveBudget, BudgetVersionNotEditableError, deleteBudgetAmount, getOrCreateDraft, parseFiscalYear, upsertBudgetAmount,
 } from '@/lib/budgets/service';
 import { sekToOre } from '@/lib/money';
 import { requireTreasurer } from '@/lib/session';
@@ -29,6 +29,14 @@ function redirectWithYear(fiscalYear: string, error?: string): never {
   const params = new URLSearchParams({ year: fiscalYear });
   if (error) params.set('error', error);
   redirect(`/budget?${params.toString()}`);
+}
+
+export async function startDraftAction(formData: FormData) {
+  await requireTreasurer();
+  const fiscalYear = parseFiscalYear(String(formData.get('fiscalYear') ?? ''));
+  await getOrCreateDraft(await getDb(), fiscalYear);
+  revalidatePath('/budget');
+  redirectWithYear(String(fiscalYear));
 }
 
 export async function addLineAction(formData: FormData) {
