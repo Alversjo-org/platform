@@ -1,11 +1,7 @@
-import cleanCoords from '@turf/clean-coords';
-import { featureCollection, polygon } from '@turf/helpers';
 import pointOnFeature from '@turf/point-on-feature';
-import union from '@turf/union';
 import type { LineString, MultiLineString, MultiPolygon, Point, Polygon, Position } from 'geojson';
-import { GRID_COLS, GRID_ROWS, SITE_BBOX } from './constants';
+import { SITE_BBOX } from './constants';
 import type { ShapeFamily } from './feature-kinds';
-import { imageFractionToLonLat } from './legacy-image';
 
 /** An area's outline: GeoJSON (RFC 7946), WGS84, positions as [lon, lat]. */
 export type AreaGeometry = Polygon | MultiPolygon;
@@ -97,22 +93,6 @@ export function combinePolygons(polygons: Position[][][]): AreaGeometry {
 /** Splits a geometry into its polygons (each a list of rings). */
 export function splitPolygons(geometry: AreaGeometry): Position[][][] {
   return geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
-}
-
-/**
- * Converts grid cells drawn on the old map image into a real-world outline: each cell becomes
- * a small quadrilateral in lon/lat, and touching cells are merged into one polygon.
- */
-export function cellsToGeometry(cells: Array<{ col: number; row: number }>): AreaGeometry | null {
-  if (cells.length === 0) return null;
-  // Merge in whole grid units, where shared edges and straight lines are exact, then convert.
-  const squares = cells.map(({ col, row }) => polygon([[[col, row], [col + 1, row], [col + 1, row + 1], [col, row + 1], [col, row]]]));
-  const merged = squares.length === 1 ? squares[0] : union(featureCollection(squares));
-  if (!merged) return null;
-  // Union keeps the corners of every cell, including those in the middle of a straight edge.
-  const toLonLat = ([col, row]: Position): Position => imageFractionToLonLat(col / GRID_COLS, row / GRID_ROWS);
-  const polygons = splitPolygons(cleanCoords(merged).geometry).map((rings) => rings.map((ring) => ring.map(toLonLat)));
-  return parseAreaGeometry(combinePolygons(polygons));
 }
 
 /** A point guaranteed to lie on the shape, for its label. Returned as Leaflet `[lat, lng]`. */

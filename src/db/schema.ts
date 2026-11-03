@@ -177,12 +177,6 @@ export const area = pgTable('area', {
   geometry: jsonb('geometry').$type<AreaGeometry>(),
 });
 
-export const areaGridCell = pgTable('area_grid_cell', {
-  areaId: text('area_id').notNull().references(() => area.id, { onDelete: 'cascade' }),
-  col: integer('col').notNull(),
-  row: integer('row').notNull(),
-}, (t) => [primaryKey({ columns: [t.areaId, t.col, t.row] })]);
-
 // Things on the map that aren't bookable areas: places (water, toilets, barns), borders, paths,
 // sound zones, … Kinds, their layer and shape family are defined in src/lib/map/feature-kinds.ts.
 export const mapFeature = pgTable('map_feature', {
@@ -363,7 +357,6 @@ export type ProjectMember = typeof projectMember.$inferSelect;
 export type EventDetails = typeof eventDetails.$inferSelect;
 export type Area = typeof area.$inferSelect;
 export type MapFeature = typeof mapFeature.$inferSelect;
-export type AreaGridCell = typeof areaGridCell.$inferSelect;
 export type EventArea = typeof eventArea.$inferSelect;
 export type EventSignup = typeof eventSignup.$inferSelect;
 export type DecisionLog = typeof decisionLog.$inferSelect;

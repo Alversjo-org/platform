@@ -1,10 +1,7 @@
-// The old static map image. Kept as an optional overlay layer, and as the reference frame
-// for grid cells drawn before the map used real coordinates (see legacy-image.ts).
+// The old static map image, kept as an optional overlay layer (placed by legacy-image.ts).
 export const MAP_IMAGE_SRC = '/map/alversjo.jpg';
 export const MAP_IMAGE_WIDTH = 1755;
 export const MAP_IMAGE_HEIGHT = 2482;
-export const GRID_COLS = 60;
-export const GRID_ROWS = 85;
 
 /** Where the map opens, as Leaflet `[lat, lng]`. The farm buildings. */
 export const SITE_CENTER: [number, number] = [57.6226, 14.9276];

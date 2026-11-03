@@ -53,7 +53,7 @@ takes traffic, and `--ha=false` keeps the app at the single machine the
 design calls for.
 
 `db:seed-map-areas` (`src/db/seed-map-areas.ts`) is idempotent — it never
-duplicates an area and never overwrites cells an admin has already edited —
+duplicates an area and never overwrites an outline someone has drawn —
 so running it on every deploy is safe. It is **not** safe to run against a
 local dev database while `npm run dev` is also running against it: PGlite
 is a single-process embedded database, and a second process writing to the
