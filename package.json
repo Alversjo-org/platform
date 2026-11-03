@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
+    "@aws-sdk/client-s3": "^3.1161.0",
     "@base-ui/react": "^1.8.0",
     "@better-auth/drizzle-adapter": "^1.7.5",
     "@electric-sql/pglite": "^0.5.8",
