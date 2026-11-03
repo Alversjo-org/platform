@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb, schema, type Db } from '@/db';
 import type { Role } from '@/db/schema';
 import { getAuth } from '@/lib/auth';
+import { isActiveNow } from '@/lib/members/status';
 
 export type SessionUser = { id: string; email: string; roles: Role[] };
 
@@ -57,3 +58,21 @@ export const requireMemberAdmin = () => requireAnyRole(MEMBER_ADMIN_ROLES);
 export const requireMapper = () => requireAnyRole(MAPPER_ROLES);
 export const requireRoleAdmin = () => requireAnyRole(ROLE_ADMIN_ROLES);
 export const requireTreasurer = () => requireAnyRole(TREASURER_ROLES);
+
+/** Events are for paying members. Admins see them too, whatever their own membership says. */
+export async function canSeeEvents(user: SessionUser): Promise<boolean> {
+  if (hasAnyRole(user, ADMIN_ROLES)) return true;
+  const db = await getDb();
+  const [member] = await db
+    .select({ isActiveMember: schema.user.isActiveMember, membershipExpiresAt: schema.user.membershipExpiresAt })
+    .from(schema.user)
+    .where(eq(schema.user.id, user.id));
+  return member !== undefined && isActiveNow(member);
+}
+
+/** For every events page and action except the list, which explains the rule to non-members. */
+export async function requireEventAccess(): Promise<SessionUser> {
+  const u = await requireUser();
+  if (!(await canSeeEvents(u))) redirect('/events');
+  return u;
+}

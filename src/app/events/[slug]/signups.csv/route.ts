@@ -4,7 +4,7 @@ import { getDb, schema } from '@/db';
 import { listSignups } from '@/lib/events/signup-service';
 import { assertEventPermission } from '@/lib/projects/authorization';
 import { getProjectBySlug } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 
 function csvField(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
@@ -12,7 +12,7 @@ function csvField(value: string): string {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();

@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { AppShell } from '@/components/app-shell';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EventsCalendar } from '@/components/events/events-calendar';
@@ -10,7 +11,7 @@ import type { EventDetails, Project } from '@/db/schema';
 import { toCalendarEvents } from '@/lib/events/calendar-view';
 import { getOrCreateIcalToken } from '@/lib/members/service';
 import { listDraftEventsForUser } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { canSeeEvents, requireUser } from '@/lib/session';
 import { splitStockholmDateAndTime } from '@/lib/timezone';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,24 @@ function EventTable({ items }: { items: EventRow[] }) {
 
 export default async function EventsPage() {
   const user = await requireUser();
+  if (!(await canSeeEvents(user))) {
+    return (
+      <AppShell user={user}>
+        <Card className="max-w-xl">
+          <CardHeader>
+            <CardTitle>Events are for members</CardTitle>
+            <CardDescription>
+              Events show here once you have paid the yearly membership fee. You can pay it on your <Link href="/" className="underline">home page</Link>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            If you are a member (have paid the yearly fee within the last 12 months) but still get to this page you can
+            contact Viktor Zaunders on the Alversjö Discord to try to figure it out.
+          </CardContent>
+        </Card>
+      </AppShell>
+    );
+  }
   const db = await getDb();
   const icalToken = await getOrCreateIcalToken(db, user.id);
   const rows = await db.select({ project: schema.project, details: schema.eventDetails })

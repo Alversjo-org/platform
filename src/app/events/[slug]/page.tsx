@@ -14,7 +14,7 @@ import { listSignups } from '@/lib/events/signup-service';
 import { oreToSek } from '@/lib/money';
 import { ALLOWED_TRANSITIONS, getProjectBySlug } from '@/lib/projects/service';
 import { canViewEvent, getEventRole } from '@/lib/projects/authorization';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 import { splitStockholmDateAndTime } from '@/lib/timezone';
 
 function formatEventWhen(date: Date): string {
@@ -36,7 +36,7 @@ export default async function EventDetailPage({
 }) {
   const { slug } = await params;
   const { error } = await searchParams;
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();

@@ -8,10 +8,10 @@ import { parseEventDetailsForm } from '@/lib/events/parse-details-form';
 import { bookEventAreas, removeEventArea } from '@/lib/areas/booking-service';
 import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/authorization';
 import { getProjectBySlug, setProjectGroup, updateProjectMeta } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 
 async function loadEditableProject(slug: string) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();

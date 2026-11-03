@@ -4,10 +4,10 @@ import { getEventDetails } from '@/lib/events/details-service';
 import { buildEventIcs } from '@/lib/events/ical';
 import { canViewEvent, getEventRole } from '@/lib/projects/authorization';
 import { getProjectBySlug } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const { slug } = await params;
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);

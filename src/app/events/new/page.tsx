@@ -11,13 +11,13 @@ import { CapacityFieldset } from '@/components/events/capacity-fieldset';
 import { DateRangeFields } from '@/components/events/date-range-fields';
 import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 import { createEventAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewEventPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const { error } = await searchParams;
   const db = await getDb();
   const areas = await listAreas(db);

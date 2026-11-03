@@ -5,7 +5,7 @@ import { listUpcomingAreaBookings } from '@/lib/areas/booking-service';
 import { listMappedAreas } from '@/lib/map/area-geometry';
 import { listMapFeatures, toMapFeatureData } from '@/lib/map/features';
 import { buildMapAreaData } from '@/lib/map/view-model';
-import { hasAnyRole, MAPPER_ROLES, requireUser } from '@/lib/session';
+import { canSeeEvents, hasAnyRole, MAPPER_ROLES, requireUser } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,8 @@ export default async function MapPage() {
   const [mapped, features, bookings] = await Promise.all([
     listMappedAreas(db),
     listMapFeatures(db),
-    listUpcomingAreaBookings(db, new Date()),
+    // Bookings name events, so only those who can see events get them.
+    canSeeEvents(user).then((ok) => (ok ? listUpcomingAreaBookings(db, new Date()) : [])),
   ]);
   const areas = buildMapAreaData(mapped, bookings);
   return (
