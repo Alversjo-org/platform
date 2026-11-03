@@ -6,7 +6,7 @@ import { BlockNoteReadOnly } from '@/components/wiki/block-note-view';
 import { CommentThread } from '@/components/wiki/comment-thread';
 import { getDb } from '@/db';
 import { hasPendingRequest } from '@/lib/roles/request-service';
-import { getSessionUser, hasAnyRole } from '@/lib/session';
+import { hasAnyRole, requireUser } from '@/lib/session';
 import { getPageBySlug, getPageTree, type WikiPageTreeNode } from '@/lib/wiki/page-service';
 
 export const dynamic = 'force-dynamic';
@@ -25,10 +25,10 @@ export default async function WikiPageView({ params }: { params: Promise<{ slug:
   const db = await getDb();
   const page = await getPageBySlug(db, slug);
   if (!page) notFound();
-  const user = await getSessionUser();
-  const canEdit = user ? hasAnyRole(user, ['admin', 'wiki-editor']) : false;
+  const user = await requireUser();
+  const canEdit = hasAnyRole(user, ['admin', 'wiki-editor']);
   const crumbs = (pathTo(await getPageTree(db), page.id) ?? []).slice(0, -1);
-  const pending = user && !canEdit ? await hasPendingRequest(db, { userId: user.id, role: 'wiki-editor' }) : false;
+  const pending = !canEdit ? await hasPendingRequest(db, { userId: user.id, role: 'wiki-editor' }) : false;
 
   return (
     <article>
@@ -42,7 +42,7 @@ export default async function WikiPageView({ params }: { params: Promise<{ slug:
         <div className="flex items-center gap-2">
           <Button nativeButton={false} size="sm" variant="ghost" render={<Link href={`/wiki/${page.slug}/history`} />}>History</Button>
           {canEdit && <Button nativeButton={false} size="sm" render={<Link href={`/wiki/${page.slug}/edit`} />}>Edit</Button>}
-          {user && !canEdit && <AskToEditButton pending={pending} returnTo={`/wiki/${page.slug}`} />}
+          {!canEdit && <AskToEditButton pending={pending} returnTo={`/wiki/${page.slug}`} />}
         </div>
       </div>
       <BlockNoteReadOnly content={page.content} />

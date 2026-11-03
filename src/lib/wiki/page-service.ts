@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
 import type { WikiPage } from '@/db/schema';
 import { slugify } from '@/lib/slug';
@@ -120,12 +120,29 @@ export async function deletePage(db: Db, pageId: string): Promise<void> {
     .where(and(eq(schema.wikiPage.parentId, pageId), eq(schema.wikiPage.status, 'published')))
     .limit(1);
   if (children.length > 0) throw new PageHasChildrenError();
-  const [row] = await db.update(schema.wikiPage).set({ status: 'deleted' }).where(eq(schema.wikiPage.id, pageId)).returning();
+  const [row] = await db.update(schema.wikiPage).set({ status: 'deleted', updatedAt: new Date() }).where(eq(schema.wikiPage.id, pageId)).returning();
   if (!row) throw new PageNotFoundError();
 }
 
+/** Deleted pages, most recently deleted first (deletePage stamps updatedAt). */
+export function listDeletedPages(db: Db): Promise<WikiPage[]> {
+  return db.select().from(schema.wikiPage)
+    .where(eq(schema.wikiPage.status, 'deleted'))
+    .orderBy(desc(schema.wikiPage.updatedAt));
+}
+
+/** Un-deletes a page. If its parent is no longer published it moves to top level, so it can't vanish from the tree. */
 export async function restorePage(db: Db, pageId: string): Promise<WikiPage> {
-  const [row] = await db.update(schema.wikiPage).set({ status: 'published' }).where(eq(schema.wikiPage.id, pageId)).returning();
-  if (!row) throw new PageNotFoundError();
+  const [page] = await db.select().from(schema.wikiPage).where(eq(schema.wikiPage.id, pageId));
+  if (!page) throw new PageNotFoundError();
+  let parentId = page.parentId;
+  if (parentId) {
+    const [parent] = await db.select({ status: schema.wikiPage.status }).from(schema.wikiPage).where(eq(schema.wikiPage.id, parentId));
+    if (!parent || parent.status !== 'published') parentId = null;
+  }
+  const [row] = await db.update(schema.wikiPage)
+    .set({ status: 'published', parentId, updatedAt: new Date() })
+    .where(eq(schema.wikiPage.id, pageId))
+    .returning();
   return row;
 }

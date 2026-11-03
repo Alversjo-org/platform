@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDb, schema } from '@/db';
-import { createPage, deletePage, getPageBySlug, getPageTree, InvalidMoveError, movePage, PageConflictError, PageHasChildrenError, restorePage, updatePage } from './page-service';
+import { createPage, deletePage, listDeletedPages, getPageBySlug, getPageTree, InvalidMoveError, movePage, PageConflictError, PageHasChildrenError, restorePage, updatePage } from './page-service';
 
 describe('createPage / getPageBySlug', () => {
   it('creates a page with version 1 and an initial revision', async () => {
@@ -121,5 +121,41 @@ describe('movePage', () => {
     const b = await createPage(db, { title: 'B', content: [], parentId: a.id, createdByUserId: 'u1' });
     await expect(movePage(db, { pageId: a.id, parentId: a.id, position: 0 })).rejects.toThrow(InvalidMoveError);
     await expect(movePage(db, { pageId: a.id, parentId: b.id, position: 0 })).rejects.toThrow(InvalidMoveError);
+  });
+});
+
+describe('listDeletedPages / restore under a deleted parent', () => {
+  it('lists only deleted pages, most recently updated first', async () => {
+    const db = await createDb('pglite://memory');
+    await db.insert(schema.user).values({ id: 'u1', email: 'u1@example.org' });
+    const keep = await createPage(db, { title: 'Keep', content: [], createdByUserId: 'u1' });
+    const a = await createPage(db, { title: 'A', content: [], createdByUserId: 'u1' });
+    const b = await createPage(db, { title: 'B', content: [], createdByUserId: 'u1' });
+    await deletePage(db, a.id);
+    await deletePage(db, b.id);
+    const deleted = await listDeletedPages(db);
+    expect(deleted.map((p) => p.title)).toEqual(['B', 'A']);
+    expect(deleted.some((p) => p.id === keep.id)).toBe(false);
+  });
+
+  it('restoring a child whose parent is deleted puts it at top level so it stays visible', async () => {
+    const db = await createDb('pglite://memory');
+    await db.insert(schema.user).values({ id: 'u1', email: 'u1@example.org' });
+    const parent = await createPage(db, { title: 'Parent', content: [], createdByUserId: 'u1' });
+    const child = await createPage(db, { title: 'Child', content: [], parentId: parent.id, createdByUserId: 'u1' });
+    await deletePage(db, child.id);
+    await deletePage(db, parent.id);
+    const restored = await restorePage(db, child.id);
+    expect(restored.parentId).toBeNull();
+    expect((await getPageTree(db)).map((n) => n.title)).toEqual(['Child']);
+  });
+
+  it('keeps the parent when it is still published', async () => {
+    const db = await createDb('pglite://memory');
+    await db.insert(schema.user).values({ id: 'u1', email: 'u1@example.org' });
+    const parent = await createPage(db, { title: 'Parent', content: [], createdByUserId: 'u1' });
+    const child = await createPage(db, { title: 'Child', content: [], parentId: parent.id, createdByUserId: 'u1' });
+    await deletePage(db, child.id);
+    expect((await restorePage(db, child.id)).parentId).toBe(parent.id);
   });
 });

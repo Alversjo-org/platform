@@ -34,6 +34,11 @@ export class LocalImageStorage implements ImageStorage {
   }
 }
 
+/** Public object URL for a Tigris bucket: `https://<bucket>.<endpoint host>/<key>` (bucket must be created public). */
+export function tigrisPublicUrl(endpoint: string, bucket: string, key: string): string {
+  return `https://${bucket}.${new URL(endpoint).host}/${key}`;
+}
+
 export class TigrisImageStorage implements ImageStorage {
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -54,8 +59,8 @@ export class TigrisImageStorage implements ImageStorage {
     await this.client.send(
       new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: buffer, ContentType: contentType }),
     );
-    // Unverified against a live bucket (plan: implementer's call) — confirm Tigris's public URL format before production use.
-    return `${process.env.AWS_ENDPOINT_URL_S3}/${this.bucket}/${key}`;
+    // Not yet verified against a live bucket (none exists in the org yet) — confirm after `fly storage create --public`.
+    return tigrisPublicUrl(process.env.AWS_ENDPOINT_URL_S3 ?? 'https://fly.storage.tigris.dev', this.bucket, key);
   }
 
   async delete(key: string): Promise<void> {

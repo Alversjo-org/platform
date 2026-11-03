@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { LocalImageStorage, getImageStorage } from './storage';
+import { LocalImageStorage, getImageStorage, tigrisPublicUrl } from './storage';
 
 describe('LocalImageStorage', () => {
   let dir: string;
@@ -38,5 +38,11 @@ describe('getImageStorage', () => {
   it('returns LocalImageStorage when no AWS credentials are configured', () => {
     delete process.env.AWS_ACCESS_KEY_ID;
     expect(getImageStorage()).toBeInstanceOf(LocalImageStorage);
+  });
+});
+
+describe('tigrisPublicUrl', () => {
+  it('uses the bucket-subdomain form Tigris serves public objects from', () => {
+    expect(tigrisPublicUrl('https://fly.storage.tigris.dev', 'my-bucket', 'wiki/a.webp')).toBe('https://my-bucket.fly.storage.tigris.dev/wiki/a.webp');
   });
 });

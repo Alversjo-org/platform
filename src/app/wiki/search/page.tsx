@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import { getDb } from '@/db';
+import { requireUser } from '@/lib/session';
 import { searchPages } from '@/lib/wiki/search';
 
 export const dynamic = 'force-dynamic';
 
 export default async function WikiSearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  await requireUser();
   const q = ((await searchParams).q ?? '').trim();
   const results = q ? await searchPages(await getDb(), q) : [];
   return (

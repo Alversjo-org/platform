@@ -11,8 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { ROLE_LABELS } from '@/lib/roles/labels';
 import { hasAnyRole, isMemberAdmin, isTreasurer, type SessionUser } from '@/lib/session';
 
-export async function AppShell({ user, children }: { user: SessionUser | null; children: React.ReactNode }) {
-  if (!user) return <PublicShell>{children}</PublicShell>;
+export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const db = await getDb();
   const [profile] = await db
     .select({ name: schema.user.name, nickname: schema.user.nickname, image: schema.user.image })
@@ -67,23 +66,6 @@ export async function AppShell({ user, children }: { user: SessionUser | null; c
           {isTreasurer(user) && <Link href="/budget" className="text-sm text-muted-foreground hover:text-foreground">Budget</Link>}
           {isTreasurer(user) && <Link href="/project-groups" className="text-sm text-muted-foreground hover:text-foreground">Project groups</Link>}
         </nav>
-      </header>
-      <Separator className="my-4" />
-      <main>{children}</main>
-    </div>
-  );
-}
-
-/** Logged-out chrome for the public wiki: logo, wiki link and a login link; no member navigation. */
-function PublicShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl p-6">
-      <header className="flex items-center justify-between">
-        <Link href="/wiki" className="flex items-center gap-2 text-lg font-semibold">
-          <Image src="/alversjo-logo.png" alt="" width={32} height={32} />
-          Alversjö
-        </Link>
-        <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Log in</Link>
       </header>
       <Separator className="my-4" />
       <main>{children}</main>
