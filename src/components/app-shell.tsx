@@ -57,6 +57,7 @@ export async function AppShell({ user, children }: { user: SessionUser; children
           <Link href="/boxes" className="text-sm text-muted-foreground hover:text-foreground">Boxes</Link>
           <Link href="/expenses" className="text-sm text-muted-foreground hover:text-foreground">Outlays</Link>
           <Link href="/tasks" className="text-sm text-muted-foreground hover:text-foreground">Tasks</Link>
+          <Link href="/wishlist" className="text-sm text-muted-foreground hover:text-foreground">Wishlist</Link>
           {isMemberAdmin(user) && <Link href="/members" className="text-sm text-muted-foreground hover:text-foreground">Members</Link>}
           {hasAnyRole(user, ['admin', 'mapper']) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
           {hasAnyRole(user, ['admin', 'role-admin']) && <Link href="/roles" className="text-sm text-muted-foreground hover:text-foreground">Roles</Link>}
