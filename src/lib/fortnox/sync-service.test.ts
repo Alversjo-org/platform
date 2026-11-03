@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { unusedWrites } from '@/lib/fortnox/testing';
 import { describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { FortnoxClient } from './client';
@@ -18,6 +19,7 @@ function fakeClient(overrides: Partial<FortnoxClient> = {}): FortnoxClient {
     getFxProjects: async () => [],
     listVoucherKeys: async () => [],
     getVoucher: async () => { throw new Error('not used'); },
+    ...unusedWrites,
     ...overrides,
   };
 }

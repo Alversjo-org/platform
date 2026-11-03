@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { FeatureKind } from '@/lib/map/feature-kinds';
 import type { AreaGeometry, FeatureGeometry } from '@/lib/map/geometry';
@@ -348,6 +348,112 @@ export const task = pgTable('task', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// ---------------------------------------------------------------------------------------------
+// Utlägg (member outlays): receipts, approval, Fortnox booking and bank-file payouts.
+// Design: docs/superpowers/specs/2026-11-03-expenses-bank-file-design.md
+
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType: () => 'bytea',
+  fromDriver: (v) => (Buffer.isBuffer(v) ? v : Buffer.from(v)),
+});
+
+export type BankAccountKind = 'iban' | 'se';
+export type ExpenseStatus = 'submitted' | 'approved' | 'rejected' | 'paid';
+export type PaymentBatchStatus = 'exported' | 'paid' | 'cancelled';
+
+// A member's payout account. The account numbers are only ever stored encrypted
+// (AES-256-GCM, key BANK_DATA_KEY, see src/lib/expenses/bank-crypto.ts); `last4` is for display.
+export const memberBankAccount = pgTable('member_bank_account', {
+  userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+  kind: text('kind', { enum: ['iban', 'se'] }).$type<BankAccountKind>().notNull(),
+  holderName: text('holder_name').notNull(),
+  encrypted: text('encrypted').notNull(),
+  last4: text('last4').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedByUserId: text('updated_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+});
+
+export const expense = pgTable('expense', {
+  id: text('id').primaryKey(),
+  reference: text('reference').notNull().unique(), // short human id, e.g. "U-7F3K2Q"; also on the voucher and the payment
+  userId: text('user_id').notNull().references(() => user.id), // no cascade: bookkeeping records outlive accounts
+  projectId: text('project_id').references(() => project.id, { onDelete: 'set null' }),
+  description: text('description').notNull(),
+  merchant: text('merchant').notNull().default(''),
+  purchaseDate: text('purchase_date').notNull(), // YYYY-MM-DD
+  totalOre: integer('total_ore').notNull(),
+  vatOre: integer('vat_ore').notNull().default(0),
+  note: text('note').notNull().default(''),
+  status: text('status', { enum: ['submitted', 'approved', 'rejected', 'paid'] }).$type<ExpenseStatus>().notNull().default('submitted'),
+  ocrSuggestion: jsonb('ocr_suggestion'), // what the receipt reader suggested, kept for comparison
+  decidedByUserId: text('decided_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  decidedAt: timestamp('decided_at'),
+  rejectionReason: text('rejection_reason'),
+  // Booking, set by the treasurer at approval.
+  costAccount: integer('cost_account'),
+  costCentreCode: text('cost_centre_code'),
+  fxProjectCode: text('fx_project_code'),
+  bookVat: boolean('book_vat').notNull().default(true),
+  voucherYear: integer('voucher_year'), // Fortnox financial year id
+  voucherSeries: text('voucher_series'),
+  voucherNumber: integer('voucher_number'),
+  bookedAt: timestamp('booked_at'),
+  bookingError: text('booking_error'),
+  paymentBatchId: text('payment_batch_id').references((): AnyPgColumn => paymentBatch.id, { onDelete: 'set null' }),
+  paidAt: timestamp('paid_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [index('expense_user_idx').on(t.userId), index('expense_status_idx').on(t.status)]);
+
+export const expenseReceipt = pgTable('expense_receipt', {
+  id: text('id').primaryKey(),
+  expenseId: text('expense_id').notNull().references(() => expense.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  contentType: text('content_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  data: bytea('data').notNull(),
+  fortnoxFileId: text('fortnox_file_id'), // set once uploaded to the Fortnox inbox
+  connectedAt: timestamp('connected_at'), // set once attached to the expense's voucher
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('expense_receipt_expense_idx').on(t.expenseId)]);
+
+// One pain.001 file sent to the bank. The XML holds full account numbers, so it is stored encrypted.
+export const paymentBatch = pgTable('payment_batch', {
+  id: text('id').primaryKey(),
+  reference: text('reference').notNull().unique(), // e.g. "UB-20261103-1"; the file's message id
+  status: text('status', { enum: ['exported', 'paid', 'cancelled'] }).$type<PaymentBatchStatus>().notNull().default('exported'),
+  executionDate: text('execution_date').notNull(), // YYYY-MM-DD requested of the bank
+  totalOre: integer('total_ore').notNull(),
+  count: integer('count').notNull(),
+  fileEncrypted: text('file_encrypted').notNull(),
+  createdByUserId: text('created_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  paidAt: text('paid_at'), // YYYY-MM-DD the bank paid, as confirmed by the treasurer
+  decidedByUserId: text('decided_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+  voucherYear: integer('voucher_year'),
+  voucherSeries: text('voucher_series'),
+  voucherNumber: integer('voucher_number'),
+  bookingError: text('booking_error'),
+});
+
+// Single row ('default'): who pays (the association's own account) and how outlays are booked.
+export const expenseSettings = pgTable('expense_settings', {
+  id: text('id').primaryKey().default('default'),
+  debtorName: text('debtor_name').notNull().default(''),
+  debtorOrgNumber: text('debtor_org_number').notNull().default(''),
+  debtorIban: text('debtor_iban').notNull().default(''),
+  debtorBic: text('debtor_bic').notNull().default(''),
+  bankCustomerId: text('bank_customer_id').notNull().default(''), // agreement id some banks require in the file
+  bankLedgerAccount: integer('bank_ledger_account').notNull().default(1930),
+  liabilityAccount: integer('liability_account').notNull().default(2890),
+  vatAccount: integer('vat_account').notNull().default(2640),
+  defaultCostAccount: integer('default_cost_account').notNull().default(6990),
+  outlaySeries: text('outlay_series').notNull().default('U'),
+  payoutSeries: text('payout_series').notNull().default('UB'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedByUserId: text('updated_by_user_id').references(() => user.id, { onDelete: 'set null' }),
+});
+
 export type Box = typeof boxes.$inferSelect;
 export type User = typeof user.$inferSelect;
 export type UserRole = typeof userRole.$inferSelect;
@@ -364,3 +470,8 @@ export type ProjectGroup = typeof projectGroup.$inferSelect;
 export type AnnualBudget = typeof annualBudget.$inferSelect;
 export type BudgetAmount = typeof budgetAmount.$inferSelect;
 export type Task = typeof task.$inferSelect;
+export type MemberBankAccount = typeof memberBankAccount.$inferSelect;
+export type Expense = typeof expense.$inferSelect;
+export type ExpenseReceipt = typeof expenseReceipt.$inferSelect;
+export type PaymentBatch = typeof paymentBatch.$inferSelect;
+export type ExpenseSettings = typeof expenseSettings.$inferSelect;

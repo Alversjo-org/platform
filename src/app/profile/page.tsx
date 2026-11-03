@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import Link from 'next/link';
 import { getDb, schema } from '@/db';
 import { AppShell } from '@/components/app-shell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -40,6 +41,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             <div className="space-y-2"><Label htmlFor="discordHandle">Discord handle</Label><Input id="discordHandle" name="discordHandle" defaultValue={member.discordHandle ?? ''} /></div>
             <Button type="submit">Save</Button>
           </form>
+          <p className="text-sm"><Link href="/profile/bank" className="underline">Payout bank account</Link> <span className="text-muted-foreground">— where your outlays are paid back</span></p>
         </CardContent>
       </Card>
     </AppShell>
