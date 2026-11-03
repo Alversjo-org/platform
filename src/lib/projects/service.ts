@@ -42,7 +42,7 @@ export async function listDraftEventsForUser(db: Db, userId: string): Promise<{ 
     .orderBy(desc(schema.project.updatedAt));
 }
 
-async function uniqueSlug(db: Db, base: string): Promise<string> {
+export async function uniqueSlug(db: Db, base: string): Promise<string> {
   let candidate = base;
   let n = 2;
   while (await getProjectBySlug(db, candidate)) {
