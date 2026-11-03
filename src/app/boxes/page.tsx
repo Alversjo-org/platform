@@ -29,9 +29,9 @@ export default async function BoxesPage() {
   const boxes = await listBoxesFor(await getDb(), user);
   const states = await getLiveStates(boxes);
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Boxes</h1>
+        <h1 className="font-serif text-[36px] leading-tight font-bold md:text-[52px]">Boxes</h1>
         {hasAnyRole(user, ['admin']) && <Button nativeButton={false} render={<Link href="/boxes/new" />}>New box</Button>}
       </div>
       {boxes.length === 0 ? (

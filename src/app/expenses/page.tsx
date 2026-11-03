@@ -19,9 +19,9 @@ export default async function ExpensesPage() {
   const [expenses, account] = await Promise.all([listExpensesForUser(db, user.id), getBankAccountSummary(db, user.id)]);
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">My outlays</h1>
+        <h1 className="font-serif text-[36px] leading-tight font-bold md:text-[52px]">My outlays</h1>
         <div className="flex flex-wrap gap-2">
           {isTreasurer(user) && <Button variant="outline" nativeButton={false} render={<Link href="/expenses/review" />}>Review outlays</Button>}
           <Button nativeButton={false} render={<Link href="/expenses/new" />}>New outlay</Button>

@@ -22,9 +22,9 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
   const pendingRequests = await listPendingRoleRequests(db);
 
   return (
-    <AppShell user={actor}>
+    <AppShell user={actor} className="md:px-20">
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
-      <h1 className="mb-4 text-xl font-semibold">Roles</h1>
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Roles</h1>
       {pendingRequests.length > 0 && (
         <>
           <h2 className="mb-2 text-lg font-medium">Pending requests</h2>

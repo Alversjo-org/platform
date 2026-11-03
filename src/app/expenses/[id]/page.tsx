@@ -52,7 +52,7 @@ export default async function ExpensePage({ params, searchParams }: { params: Pr
   const allAttached = e.receipts.every((r) => r.connectedAt !== null);
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       <p className="mb-2 text-sm">
         <Link href="/expenses" className="underline">← My outlays</Link>
         {treasurer && <> · <Link href="/expenses/review" className="underline">Review outlays</Link></>}

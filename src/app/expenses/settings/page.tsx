@@ -29,9 +29,9 @@ export default async function ExpenseSettingsPage({ searchParams }: { searchPara
   const s = await getExpenseSettings(await getDb());
 
   return (
-    <AppShell user={treasurer}>
+    <AppShell user={treasurer} className="md:px-20">
       <p className="mb-2 text-sm"><Link href="/expenses/review" className="underline">← Review outlays</Link></p>
-      <h1 className="mb-4 text-xl font-semibold">Outlay settings</h1>
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Outlay settings</h1>
       {error && <Alert variant="destructive" className="mb-4 max-w-2xl"><AlertDescription>{error}</AlertDescription></Alert>}
       {saved && !error && <Alert className="mb-4 max-w-2xl"><AlertDescription>Saved.</AlertDescription></Alert>}
       <form action={saveExpenseSettingsAction} className="max-w-2xl space-y-4">

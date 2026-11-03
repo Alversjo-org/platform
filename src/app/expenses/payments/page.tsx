@@ -34,9 +34,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const settingsMissing = !settings.debtorName || !settings.debtorOrgNumber || !settings.debtorIban;
 
   return (
-    <AppShell user={treasurer}>
+    <AppShell user={treasurer} className="md:px-20">
       <p className="mb-2 text-sm"><Link href="/expenses/review" className="underline">← Review outlays</Link></p>
-      <h1 className="mb-4 text-xl font-semibold">Payments</h1>
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Payments</h1>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       {created && (
         <Alert className="mb-4"><AlertDescription>

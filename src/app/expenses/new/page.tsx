@@ -18,7 +18,7 @@ export default async function NewExpensePage() {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       <p className="mb-2 text-sm"><Link href="/expenses" className="underline">← My outlays</Link></p>
       <Card className="max-w-xl">
         <CardHeader><CardTitle>New outlay</CardTitle></CardHeader>

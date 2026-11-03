@@ -22,10 +22,10 @@ export default async function NewEventPage({ searchParams }: { searchParams: Pro
   const db = await getDb();
   const areas = await listAreas(db);
   return (
-    <AppShell user={user}>
-      <h1 className="mb-4 text-xl font-semibold">New event</h1>
+    <AppShell user={user} className="md:px-20">
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">New event</h1>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
-      <form action={createEventAction} className="space-y-6">
+      <form action={createEventAction} className="max-w-3xl space-y-6">
         <Card>
           <CardHeader><CardTitle>Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">

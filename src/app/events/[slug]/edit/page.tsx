@@ -62,9 +62,9 @@ export default async function EditEventPage({
   const ends = details ? splitStockholmDateAndTime(details.endsAt) : { date: '', time: null };
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20 [&>*]:max-w-3xl">
       <div className="mb-4 flex items-center gap-2">
-        <h1 className="text-xl font-semibold">Edit: {project.title}</h1>
+        <h1 className="font-serif text-[36px] leading-tight font-bold md:text-[52px]">Edit: {project.title}</h1>
         <Badge variant="secondary">{project.status}</Badge>
       </div>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}

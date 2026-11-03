@@ -53,14 +53,14 @@ export default async function BoxPage({
   const state = await getLiveState(box);
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{box.name}</h1>
+        <h1 className="font-serif text-[36px] leading-tight font-bold md:text-[52px]">{box.name}</h1>
         <Button nativeButton={false} render={<a href={boxOpenUrl(box.id)} />}>Open</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2">

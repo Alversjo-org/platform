@@ -62,7 +62,10 @@ export async function AppShell({ user, children, theme = 'light', backdrop, clas
 
   return (
     <div className={cn('relative flex min-h-svh flex-col text-foreground', theme === 'dark' && 'dark')}>
-      {backdrop}
+      {backdrop ?? (
+        // Pages without a photo: snow with a soft sun wash at the top.
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-snow bg-[radial-gradient(ellipse_at_top,rgb(242_193_78/0.16),transparent_60%)]" />
+      )}
       <header className="sticky top-7 z-40 mx-auto mt-7 hidden w-full max-w-[1440px] px-10 md:block">
         <div className="glass flex h-[68px] items-center gap-1 rounded-full p-3">
           <Link href="/" className="flex shrink-0 items-center gap-2.5 pr-[18px]">
