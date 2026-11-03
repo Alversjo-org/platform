@@ -61,7 +61,7 @@ export default async function BoxPage({
       )}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{box.name}</h1>
-        <Button render={<a href={boxOpenUrl(box.id)} />}>Open</Button>
+        <Button nativeButton={false} render={<a href={boxOpenUrl(box.id)} />}>Open</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

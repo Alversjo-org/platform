@@ -60,7 +60,7 @@ export function MemberDialogs(props: {
             </div>
             <div className="space-y-2"><Label htmlFor="contactNotes">Notes</Label><Textarea id="contactNotes" name="contactNotes" defaultValue={member.contactNotes ?? ''} /></div>
             <div className="flex justify-end gap-2">
-              <Button render={<Link href="/members" />} variant="outline">Cancel</Button>
+              <Button nativeButton={false} render={<Link href="/members" />} variant="outline">Cancel</Button>
               <Button type="submit">Save</Button>
             </div>
           </form>
@@ -103,7 +103,7 @@ export function MemberDialogs(props: {
               })}
             </div>
             <div className="mt-4 flex justify-end">
-              <Button render={<Link href="/members" />} variant="outline">Close</Button>
+              <Button nativeButton={false} render={<Link href="/members" />} variant="outline">Close</Button>
             </div>
           </DialogPopup>
         </Dialog>

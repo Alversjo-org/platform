@@ -32,7 +32,7 @@ export default async function BoxesPage() {
     <AppShell user={user}>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Boxes</h1>
-        {hasAnyRole(user, ['admin']) && <Button render={<Link href="/boxes/new" />}>New box</Button>}
+        {hasAnyRole(user, ['admin']) && <Button nativeButton={false} render={<Link href="/boxes/new" />}>New box</Button>}
       </div>
       {boxes.length === 0 ? (
         <p className="text-muted-foreground">No boxes shared with you yet.</p>
@@ -49,7 +49,7 @@ export default async function BoxesPage() {
                   <TableCell><Link href={`/boxes/${b.id}`} className="underline">{b.name}</Link></TableCell>
                   <TableCell><Badge variant={b.profile === 'admin' ? 'default' : 'outline'}>{b.profile}</Badge></TableCell>
                   <TableCell><Badge variant={stateBadgeVariant(state)}>{state}</Badge></TableCell>
-                  <TableCell className="text-right"><Button size="sm" render={<a href={boxOpenUrl(b.id)} />}>Open</Button></TableCell>
+                  <TableCell className="text-right"><Button size="sm" nativeButton={false} render={<a href={boxOpenUrl(b.id)} />}>Open</Button></TableCell>
                 </TableRow>
               );
             })}

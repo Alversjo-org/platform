@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import Image from 'next/image';
 import Link from 'next/link';
+import { signOutAction } from '@/app/actions';
 import { getDb, schema } from '@/db';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -48,8 +49,11 @@ export async function AppShell({ user, children }: { user: SessionUser; children
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href="/profile" />}>Edit profile</DropdownMenuItem>
+              <DropdownMenuItem nativeButton render={<button type="submit" form="sign-out" />} className="w-full">Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {/* The menu renders in a portal, so its Sign out item submits this form by id. */}
+          <form id="sign-out" action={signOutAction} hidden />
         </div>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link href="/events" className="text-sm text-muted-foreground hover:text-foreground">Events</Link>
