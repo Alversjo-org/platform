@@ -12,12 +12,16 @@ import { combineLines, combinePolygons, splitPolygons, type AreaGeometry, type F
 
 export type GeometryReader = () => FeatureGeometry | null;
 
+/** The editing modes, for a toolbar of our own instead of geoman's icon bar. */
+export type ShapeTool = 'draw' | 'rectangle' | 'edit' | 'move' | 'cut' | 'remove';
+export type ShapeToolsApi = { use: (tool: ShapeTool | null) => void };
+
 // Opt-in: geoman only manages maps and layers created with `pmIgnore: false` (the shape being
 // edited) and what it draws itself, never background layers. Global, but this module is only
 // loaded by the editors.
 L.PM.setOptIn(true);
 
-const EDIT_STYLE = { color: '#2563eb', weight: 3 };
+const EDIT_STYLE = { color: '#ffffff', weight: 3, fillColor: '#ffffff', fillOpacity: 0.12 };
 
 function initialLayers(shape: ShapeFamily, initial: FeatureGeometry | null): L.Layer[] {
   if (!initial) return [];
@@ -70,7 +74,8 @@ function usePointEditor(map: L.Map, initial: FeatureGeometry | null, onReady: (r
 }
 
 /** Lines and polygons: geoman's draw/edit/drag/cut/remove tools. */
-function useShapeEditor(map: L.Map, shape: 'line' | 'polygon', initial: FeatureGeometry | null, onReady: (r: GeometryReader) => void, onChange: () => void) {
+function useShapeEditor(map: L.Map, shape: 'line' | 'polygon', initial: FeatureGeometry | null, onReady: (r: GeometryReader) => void, onChange: () => void,
+  onTools?: (api: ShapeToolsApi) => void, onToolEnd?: () => void) {
   useEffect(() => {
     // Tracked here rather than asked from geoman: in opt-in mode geoman leaves shapes it draws or
     // cuts out of its own layer lists.
@@ -85,15 +90,41 @@ function useShapeEditor(map: L.Map, shape: 'line' | 'polygon', initial: FeatureG
     };
     for (const l of initialLayers(shape, initial)) track(l.addTo(map));
 
-    map.pm.addControls({
-      position: 'topleft',
-      drawMarker: false, drawCircleMarker: false, drawCircle: false, drawText: false,
-      drawPolyline: shape === 'line', drawPolygon: shape === 'polygon', drawRectangle: shape === 'polygon', cutPolygon: shape === 'polygon',
-      editMode: true, dragMode: true, removalMode: true, rotateMode: false,
-    });
+    if (onTools) {
+      const off = () => {
+        map.pm.disableDraw();
+        map.pm.disableGlobalEditMode();
+        map.pm.disableGlobalDragMode();
+        map.pm.disableGlobalRemovalMode();
+      };
+      onTools({
+        use: (tool) => {
+          off();
+          if (tool === 'draw') map.pm.enableDraw(shape === 'line' ? 'Line' : 'Polygon');
+          if (tool === 'rectangle') map.pm.enableDraw('Rectangle');
+          if (tool === 'cut') map.pm.enableDraw('Cut');
+          if (tool === 'edit') map.pm.enableGlobalEditMode();
+          if (tool === 'move') map.pm.enableGlobalDragMode();
+          if (tool === 'remove') map.pm.enableGlobalRemovalMode();
+        },
+      });
+    } else {
+      map.pm.addControls({
+        position: 'topleft',
+        drawMarker: false, drawCircleMarker: false, drawCircle: false, drawText: false,
+        drawPolyline: shape === 'line', drawPolygon: shape === 'polygon', drawRectangle: shape === 'polygon', cutPolygon: shape === 'polygon',
+        editMode: true, dragMode: true, removalMode: true, rotateMode: false,
+      });
+    }
     map.pm.setPathOptions(EDIT_STYLE);
     map.pm.setGlobalOptions({ snappable: true, snapDistance: 15 });
-    if (shapes.size > 0) map.fitBounds(L.featureGroup([...shapes]).getBounds(), { padding: [40, 40], maxZoom: 19 });
+    if (shapes.size > 0) {
+      // With our own tool panel (left, on wide screens) keep the shape clear of it.
+      const wide = onTools && window.matchMedia('(min-width: 48rem)').matches;
+      map.fitBounds(L.featureGroup([...shapes]).getBounds(), wide
+        ? { paddingTopLeft: [440, 130], paddingBottomRight: [100, 60], maxZoom: 19 }
+        : { padding: [40, 40], maxZoom: 19 });
+    }
 
     const onCreate = (e: { layer: L.Layer }) => { track(e.layer); onChange(); };
     const onRemove = (e: { layer: L.Layer }) => { shapes.delete(e.layer as L.Polyline); onChange(); };
@@ -102,9 +133,12 @@ function useShapeEditor(map: L.Map, shape: 'line' | 'polygon', initial: FeatureG
       track(e.layer);
       onChange();
     };
+    // A drawing tool ends by itself when the shape is finished.
+    const onDrawEnd = () => onToolEnd?.();
     map.on('pm:create', onCreate);
     map.on('pm:remove', onRemove);
     map.on('pm:cut', onCut);
+    map.on('pm:drawend', onDrawEnd);
 
     onReady(() => {
       const geoms = [...shapes].filter((l) => map.hasLayer(l)).map((l) => l.toGeoJSON(7).geometry);
@@ -120,26 +154,30 @@ function useShapeEditor(map: L.Map, shape: 'line' | 'polygon', initial: FeatureG
       map.off('pm:create', onCreate);
       map.off('pm:remove', onRemove);
       map.off('pm:cut', onCut);
-      map.pm.removeControls();
+      map.off('pm:drawend', onDrawEnd);
+      if (!onTools) map.pm.removeControls();
       shapes.forEach((l) => l.remove());
     };
-  }, [map, shape, initial, onReady, onChange]);
+  }, [map, shape, initial, onReady, onChange, onTools, onToolEnd]);
 }
 
 /**
  * Editing tools for one geometry, rendered inside a `<BaseMap editable>`. Reports a reader via
  * `onReady` (call it on save) and calls `onChange` on every edit.
  */
-export function ShapeEditorTools({ shape, initial, onReady, onChange }: {
+export function ShapeEditorTools({ shape, initial, onReady, onChange, onTools, onToolEnd }: {
   shape: ShapeFamily;
   initial: FeatureGeometry | null;
   onReady: (read: GeometryReader) => void;
   onChange: () => void;
+  /** With this, geoman's icon bar is left out and the caller drives the modes. */
+  onTools?: (api: ShapeToolsApi) => void;
+  onToolEnd?: () => void;
 }) {
   const map = useMap();
   return shape === 'point'
     ? <PointTools map={map} initial={initial} onReady={onReady} onChange={onChange} />
-    : <PathTools map={map} shape={shape} initial={initial} onReady={onReady} onChange={onChange} />;
+    : <PathTools map={map} shape={shape} initial={initial} onReady={onReady} onChange={onChange} onTools={onTools} onToolEnd={onToolEnd} />;
 }
 
 function PointTools(p: { map: L.Map; initial: FeatureGeometry | null; onReady: (r: GeometryReader) => void; onChange: () => void }) {
@@ -147,7 +185,10 @@ function PointTools(p: { map: L.Map; initial: FeatureGeometry | null; onReady: (
   return null;
 }
 
-function PathTools(p: { map: L.Map; shape: 'line' | 'polygon'; initial: FeatureGeometry | null; onReady: (r: GeometryReader) => void; onChange: () => void }) {
-  useShapeEditor(p.map, p.shape, p.initial, p.onReady, p.onChange);
+function PathTools(p: {
+  map: L.Map; shape: 'line' | 'polygon'; initial: FeatureGeometry | null; onReady: (r: GeometryReader) => void; onChange: () => void;
+  onTools?: (api: ShapeToolsApi) => void; onToolEnd?: () => void;
+}) {
+  useShapeEditor(p.map, p.shape, p.initial, p.onReady, p.onChange, p.onTools, p.onToolEnd);
   return null;
 }

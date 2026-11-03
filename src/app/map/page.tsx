@@ -9,8 +9,9 @@ import { canSeeEvents, hasAnyRole, MAPPER_ROLES, requireUser } from '@/lib/sessi
 
 export const dynamic = 'force-dynamic';
 
-export default async function MapPage() {
+export default async function MapPage({ searchParams }: { searchParams: Promise<{ area?: string }> }) {
   const user = await requireUser();
+  const { area } = await searchParams;
   const db = await getDb();
   const [mapped, features, bookings] = await Promise.all([
     listMappedAreas(db),
@@ -22,7 +23,7 @@ export default async function MapPage() {
   return (
     <AppShell user={user} theme="dark">
       <h1 className="sr-only">Map</h1>
-      <MapView areas={areas} features={toMapFeatureData(features)} canEditFeatures={hasAnyRole(user, MAPPER_ROLES)} canEditOutlines={hasAnyRole(user, MAPPER_ROLES)} />
+      <MapView areas={areas} features={toMapFeatureData(features)} canEditFeatures={hasAnyRole(user, MAPPER_ROLES)} canEditOutlines={hasAnyRole(user, MAPPER_ROLES)} initialSelectedId={area ?? null} />
     </AppShell>
   );
 }

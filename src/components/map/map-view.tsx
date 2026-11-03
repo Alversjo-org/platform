@@ -13,6 +13,7 @@ import { FEATURE_KINDS, MAP_LAYERS, type MapLayerId } from '@/lib/map/feature-ki
 import type { MapFeatureData } from '@/lib/map/features';
 import type { MapAreaData } from '@/lib/map/view-model';
 import type { MapLayersState } from './base-map';
+import { RoundButton, ZoomButtons } from './map-controls';
 
 // Leaflet needs `window`, and keeping it out of the server bundle means only map pages download it.
 const MapViewLeaflet = dynamic(() => import('./map-view-leaflet'), {
@@ -35,22 +36,15 @@ function LayersIcon() {
   );
 }
 
-function RoundButton({ label, onClick, children, className }: { label: string; onClick: () => void; children: React.ReactNode; className?: string }) {
-  return (
-    <button type="button" aria-label={label} onClick={onClick}
-      className={cn('flex size-11 items-center justify-center rounded-full border border-white/20 bg-night/55 text-lg text-white shadow-[0_4px_16px_rgb(0_0_0/0.18)] backdrop-blur-md', className)}>
-      {children}
-    </button>
-  );
-}
-
-export function MapView({ areas, features, canEditFeatures, canEditOutlines }: {
+export function MapView({ areas, features, canEditFeatures, canEditOutlines, initialSelectedId = null }: {
   areas: MapAreaData[];
   features: MapFeatureData[];
   canEditFeatures: boolean;
   canEditOutlines: boolean;
+  /** `/map?area=<id>`: open with that area's panel (coming back from its outline editor). */
+  initialSelectedId?: string | null;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(areas.some((a) => a.id === initialSelectedId) ? initialSelectedId : null);
   const [panel, setPanel] = useState<'none' | 'layers'>('none');
   const [tab, setTab] = useState<'layers' | 'areas'>('layers');
   const [background, setBackground] = useState<'drone' | 'street'>('drone');
@@ -108,11 +102,7 @@ export function MapView({ areas, features, canEditFeatures, canEditOutlines }: {
       )}
 
       {/* Zoom and recentre, bottom left (desktop); recentre top right on phones. */}
-      <div className="fixed bottom-28 left-10 z-30 hidden flex-col gap-2 md:flex">
-        <RoundButton label="Zoom in" onClick={() => map?.zoomIn()}>+</RoundButton>
-        <RoundButton label="Zoom out" onClick={() => map?.zoomOut()}>−</RoundButton>
-        <RoundButton label="Back to the land" onClick={home}>◎</RoundButton>
-      </div>
+      <ZoomButtons map={map} home={home} className="fixed bottom-28 left-10 z-30 hidden md:flex" />
       <RoundButton label="Back to the land" onClick={home} className="fixed top-[52px] right-4 z-30 md:hidden">◎</RoundButton>
 
       {/* "The land" toolbar: the Layers button is the only way to switch layers. */}
