@@ -5,7 +5,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getDb, schema } from '@/db';
 import { sendRenewalEmail } from '@/lib/email';
-import { InvalidPhoneError, touchLastContacted, updateMember, UserNotFoundError } from '@/lib/members/service';
+import { getRenewalMessage, renderMessage } from '@/lib/members/renewal-message';
+import { endingSoon } from '@/lib/members/renewals';
+import { InvalidPhoneError, listMembers, touchLastContacted, updateMember, UserNotFoundError } from '@/lib/members/service';
 import { requireMemberAdmin } from '@/lib/session';
 import { getStripe } from '@/lib/stripe/client';
 import { syncMembersFromStripe } from '@/lib/stripe/sync';
@@ -70,4 +72,22 @@ export async function syncFromStripeAction() {
   const errored = results.filter((r) => r.status === 'error').length;
   revalidatePath('/members');
   redirect(`/members?synced=1&created=${created}&matched=${matched}&error=${errored}`);
+}
+
+/**
+ * "Ask all N to renew": sends the saved renewal message to every active member whose
+ * membership ends in the next 30 days (worked out again here, not taken from the form).
+ */
+export async function askRenewalsAction() {
+  await requireMemberAdmin();
+  const db = await getDb();
+  const message = await getRenewalMessage(db);
+  const due = endingSoon(await listMembers(db), new Date());
+  for (const m of due) {
+    const vars = { name: m.nickname || m.name, expiresAt: m.membershipExpiresAt };
+    await sendRenewalEmail({ to: m.email, subject: renderMessage(message.subject, vars), body: renderMessage(message.body, vars) });
+    await touchLastContacted(db, m.id);
+  }
+  revalidatePath('/members');
+  redirect(`/members?asked=${due.length}`);
 }
