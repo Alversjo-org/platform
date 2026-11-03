@@ -36,14 +36,17 @@ export async function createDb(url: string | undefined = process.env.DATABASE_UR
   return db as unknown as Db;
 }
 
-let dbPromise: Promise<Db> | undefined;
+// Kept on globalThis, not in a module variable: `next dev` loads this module once per
+// bundle (pages, API routes, server actions), and separate PGlite handles on one folder
+// don't see each other's writes, so a session saved by the sign-in API was missing on pages.
+const shared = globalThis as { alversjoDb?: Promise<Db> };
 /** Process-wide database, opened on first use. */
 export function getDb(): Promise<Db> {
   // A rejected promise must not stay memoised: the next caller would get the old
   // failure forever, even once the database is reachable again.
-  dbPromise ??= createDb().catch((e) => {
-    dbPromise = undefined;
+  shared.alversjoDb ??= createDb().catch((e) => {
+    shared.alversjoDb = undefined;
     throw e;
   });
-  return dbPromise;
+  return shared.alversjoDb;
 }

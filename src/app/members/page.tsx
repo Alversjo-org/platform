@@ -73,7 +73,7 @@ export default async function MembersPage({
       )}
       <div className="mb-4 flex gap-2">
         {STATUS_TABS.map((tab) => (
-          <Button key={tab.value} render={<Link href={`/members?status=${tab.value}`} />}
+          <Button key={tab.value} nativeButton={false} render={<Link href={`/members?status=${tab.value}`} />}
             variant={status === tab.value ? 'default' : 'outline'} size="sm">
             {tab.label} ({counts[tab.value]})
           </Button>

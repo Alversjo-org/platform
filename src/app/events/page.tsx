@@ -66,7 +66,7 @@ export default async function EventsPage() {
             </TooltipTrigger>
             <TooltipContent>Adds every published event to your calendar app, kept up to date automatically.</TooltipContent>
           </Tooltip>
-          <Button render={<Link href="/events/new" />}>New event</Button>
+          <Button nativeButton={false} render={<Link href="/events/new" />}>New event</Button>
         </div>
       </div>
       {draftRows.length > 0 && (
