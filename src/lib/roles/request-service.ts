@@ -96,3 +96,12 @@ export async function decideRoleRequest(db: Db, input: { actor: { id: string }; 
     diff: { role: request.role, userId: request.userId },
   });
 }
+
+export async function hasPendingRequest(db: Db, input: { userId: string; role: Role }): Promise<boolean> {
+  const [row] = await db
+    .select({ id: schema.roleRequest.id })
+    .from(schema.roleRequest)
+    .where(and(eq(schema.roleRequest.userId, input.userId), eq(schema.roleRequest.role, input.role), eq(schema.roleRequest.status, 'pending')))
+    .limit(1);
+  return !!row;
+}

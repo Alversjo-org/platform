@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
-import { decideRoleRequest, listPendingRoleRequests, requestRole, RequestNotPendingError, RoleNotSelfRequestableError } from './request-service';
+import { decideRoleRequest, hasPendingRequest, listPendingRoleRequests, requestRole, RequestNotPendingError, RoleNotSelfRequestableError } from './request-service';
 
 describe('requestRole', () => {
   it('creates a pending request for a self-requestable role', async () => {
@@ -78,5 +78,18 @@ describe('decideRoleRequest', () => {
     const req = await requestRole(db, { userId: 'u1', role: 'wiki-editor' });
     await decideRoleRequest(db, { actor: { id: 'admin1' }, requestId: req.id, approve: true });
     await expect(decideRoleRequest(db, { actor: { id: 'admin1' }, requestId: req.id, approve: true })).rejects.toThrow(RequestNotPendingError);
+  });
+});
+
+describe('hasPendingRequest', () => {
+  it('is true only while a request for that role is pending', async () => {
+    const db: Db = await createDb('pglite://memory');
+    await db.insert(schema.user).values([{ id: 'u1', email: 'u1@example.org' }, { id: 'a', email: 'a@example.org' }]);
+    expect(await hasPendingRequest(db, { userId: 'u1', role: 'wiki-editor' })).toBe(false);
+    const req = await requestRole(db, { userId: 'u1', role: 'wiki-editor' });
+    expect(await hasPendingRequest(db, { userId: 'u1', role: 'wiki-editor' })).toBe(true);
+    expect(await hasPendingRequest(db, { userId: 'a', role: 'wiki-editor' })).toBe(false);
+    await decideRoleRequest(db, { actor: { id: 'a' }, requestId: req.id, approve: false });
+    expect(await hasPendingRequest(db, { userId: 'u1', role: 'wiki-editor' })).toBe(false);
   });
 });

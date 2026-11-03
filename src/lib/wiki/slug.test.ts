@@ -19,4 +19,10 @@ describe('uniqueWikiSlug', () => {
     await db.insert(schema.wikiPage).values({ id: 'p1', slug: 'gone', title: 'Gone', content: [], status: 'deleted', createdByUserId: 'u1' });
     expect(await uniqueWikiSlug(db, 'gone')).toBe('gone-2');
   });
+
+  it('never hands out slugs that collide with fixed /wiki routes', async () => {
+    const db = await createDb('pglite://memory');
+    expect(await uniqueWikiSlug(db, 'new')).toBe('new-2');
+    expect(await uniqueWikiSlug(db, 'search')).toBe('search-2');
+  });
 });
