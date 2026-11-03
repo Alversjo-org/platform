@@ -8,13 +8,13 @@ import { DateBlob, weekdayTime } from '@/components/date-blob';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { listComingUp } from '@/lib/events/coming-up';
-import { isActiveNow, needsPayment } from '@/lib/members/status';
+import { isActiveNow } from '@/lib/members/status';
 import { canSeeEvents, requireUser } from '@/lib/session';
 import { startCheckoutAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-const day = (d: Date) => d.toISOString().slice(0, 10);
+const day = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ error?: string; checkout?: string }> }) {
   const sessionUser = await requireUser();
@@ -35,6 +35,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
         <Image src="/alversjo-logo.png" alt="" width={36} height={36} className="size-9" />
         <span className="font-serif text-xl font-bold text-white">Alversjö</span>
       </div>
+      {active && (
+        <p className="glass mb-6 self-start rounded-full px-5 py-2.5 text-[15px] text-ink md:mx-10 md:-mt-10 md:mb-10">
+          Membership paid until: <span className="font-semibold">{day(member.membershipExpiresAt!)}</span>
+        </p>
+      )}
       <div className="flex flex-col gap-2 text-white md:gap-2.5 md:px-10 [text-shadow:0_4px_24px_rgb(0_0_0/0.25)]">
         <h1 className="font-serif text-[44px] leading-[1.05] font-bold md:text-[72px]">
           Welcome home{firstName ? `, ${firstName}` : ''}
@@ -69,21 +74,25 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
             ))}
           </section>
         )}
-        <section className="glass flex w-full flex-col gap-4 rounded-[30px] p-6 md:max-w-[400px] md:rounded-[32px]">
-          <div className="hidden md:block">
-            <Notices error={error} checkout={checkout} />
-          </div>
-          <div>
-            <h2 className="text-xs font-semibold tracking-[0.08em] text-ink-soft uppercase">Membership</h2>
-            <p className="mt-2 text-base text-ink">
-              {active
-                ? `Member until ${day(member.membershipExpiresAt!)}`
-                : member.membershipExpiresAt
+        {active ? (
+          (error || checkout) && (
+            <div className="hidden md:block">
+              <Notices error={error} checkout={checkout} />
+            </div>
+          )
+        ) : (
+          <section className="glass flex w-full flex-col gap-4 rounded-[30px] p-6 md:max-w-[400px] md:rounded-[32px]">
+            <div className="hidden md:block">
+              <Notices error={error} checkout={checkout} />
+            </div>
+            <div>
+              <h2 className="text-xs font-semibold tracking-[0.08em] text-ink-soft uppercase">Membership</h2>
+              <p className="mt-2 text-base text-ink">
+                {member.membershipExpiresAt && member.membershipExpiresAt <= new Date()
                   ? `Membership expired on ${day(member.membershipExpiresAt)}`
                   : 'You are not yet a member.'}
-            </p>
-          </div>
-          {needsPayment(member) && (
+              </p>
+            </div>
             <div className="flex flex-wrap gap-2">
               <form action={startCheckoutAction}>
                 <input type="hidden" name="plan" value="yearly" />
@@ -94,8 +103,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
                 <Button type="submit" variant="outline">Pay monthly</Button>
               </form>
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </AppShell>
   );

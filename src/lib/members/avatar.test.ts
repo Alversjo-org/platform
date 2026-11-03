@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { resizeAvatar } from './avatar';
@@ -16,6 +17,13 @@ describe('resizeAvatar', () => {
     expect(bytes.length).toBeLessThan(20_000);
 
     const meta = await sharp(bytes).metadata();
+    expect(meta).toMatchObject({ width: 128, height: 128, format: 'webp' });
+  });
+
+  it('reads an iPhone HEIC photo', async () => {
+    const heic = readFileSync(new URL('../images/fixtures/two-tone.heic', import.meta.url));
+    const result = await resizeAvatar(heic);
+    const meta = await sharp(Buffer.from(result.slice('data:image/webp;base64,'.length), 'base64')).metadata();
     expect(meta).toMatchObject({ width: 128, height: 128, format: 'webp' });
   });
 

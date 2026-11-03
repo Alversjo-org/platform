@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   // dev-time instrumentation of process.cwd()/path.resolve() (for filesystem
   // access tracing) that breaks PGlite's file-backed migration path when a
   // Server Component (as opposed to a Route Handler) calls getDb() first.
-  serverExternalPackages: ['@electric-sql/pglite', 'pg'],
+  serverExternalPackages: ['@electric-sql/pglite', 'pg', 'heic-decode', 'libheif-js'],
 
   // Nothing here is ever meant to be framed. Both headers are sent: the CSP
   // directive is what modern browsers honour, X-Frame-Options is the fallback.
