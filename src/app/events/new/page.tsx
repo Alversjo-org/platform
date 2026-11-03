@@ -16,9 +16,9 @@ import { createEventAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function NewEventPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewEventPage({ searchParams }: { searchParams: Promise<{ error?: string; area?: string }> }) {
   const user = await requireEventAccess();
-  const { error } = await searchParams;
+  const { error, area } = await searchParams;
   const db = await getDb();
   const areas = await listAreas(db);
   return (
@@ -57,8 +57,8 @@ export default async function NewEventPage({ searchParams }: { searchParams: Pro
               <div className="space-y-2"><Label htmlFor="priceNote">Price note</Label><Input id="priceNote" name="priceNote" /></div>
             </div>
             <div className="space-y-2"><Label htmlFor="contactNote">Contact note</Label><Textarea id="contactNote" name="contactNote" /></div>
-            <AddSectionToggle label="+ Add area">
-              <AreaCheckboxes areas={areas} />
+            <AddSectionToggle label="+ Add area" defaultOpen={areas.some((a) => a.id === area)}>
+              <AreaCheckboxes areas={areas} defaultCheckedAreaIds={area ? [area] : []} />
             </AddSectionToggle>
           </CardContent>
         </Card>

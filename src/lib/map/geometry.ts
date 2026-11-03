@@ -95,6 +95,28 @@ export function splitPolygons(geometry: AreaGeometry): Position[][][] {
   return geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
 }
 
+/**
+ * Size of an area outline in hectares. Projects each ring onto a local flat plane around its
+ * latitude, which is well under 1% off at the scale of the land.
+ */
+export function hectares(geometry: AreaGeometry): number {
+  const R = 6_371_008.8;
+  const rad = Math.PI / 180;
+  const ringArea = (ring: Position[]) => {
+    const lat0 = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+    const k = Math.cos(lat0 * rad);
+    let sum = 0;
+    for (let i = 0; i < ring.length; i++) {
+      const [x1, y1] = ring[i];
+      const [x2, y2] = ring[(i + 1) % ring.length];
+      sum += x1 * k * y2 - x2 * k * y1;
+    }
+    return Math.abs(sum / 2) * (R * rad) ** 2;
+  };
+  const m2 = splitPolygons(geometry).reduce((total, [outer, ...holes]) => total + ringArea(outer) - holes.reduce((h, r) => h + ringArea(r), 0), 0);
+  return m2 / 10_000;
+}
+
 /** A point guaranteed to lie on the shape, for its label. Returned as Leaflet `[lat, lng]`. */
 export function labelPoint(geometry: AreaGeometry): [number, number] {
   const [lon, lat] = pointOnFeature(geometry).geometry.coordinates;

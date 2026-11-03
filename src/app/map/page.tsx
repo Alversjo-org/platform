@@ -20,9 +20,9 @@ export default async function MapPage() {
   ]);
   const areas = buildMapAreaData(mapped, bookings);
   return (
-    <AppShell user={user}>
-      <h1 className="mb-4 text-xl font-semibold">Map</h1>
-      <MapView areas={areas} features={toMapFeatureData(features)} canEditFeatures={hasAnyRole(user, MAPPER_ROLES)} />
+    <AppShell user={user} theme="dark">
+      <h1 className="sr-only">Map</h1>
+      <MapView areas={areas} features={toMapFeatureData(features)} canEditFeatures={hasAnyRole(user, MAPPER_ROLES)} canEditOutlines={hasAnyRole(user, MAPPER_ROLES)} />
     </AppShell>
   );
 }
