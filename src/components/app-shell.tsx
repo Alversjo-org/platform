@@ -48,12 +48,14 @@ const TABS: NavItem[] = [
  * desktop and the tab bar on phones. `theme="dark"` turns the page's tokens to the night
  * palette, whatever the system setting.
  */
-export async function AppShell({ user, children, theme = 'light', backdrop, className }: {
+export async function AppShell({ user, children, theme = 'light', backdrop, className, tabBar = true }: {
   user: SessionUser;
   children: React.ReactNode;
   theme?: 'light' | 'dark';
   backdrop?: React.ReactNode;
   className?: string;
+  /** Off for pages with their own bottom bar on phones (the event page's Sign up). */
+  tabBar?: boolean;
 }) {
   const { name, nickname, image } = await loadProfile(user.id);
   const displayName = nickname || name || user.email;
@@ -98,7 +100,7 @@ export async function AppShell({ user, children, theme = 'light', backdrop, clas
       <main className={cn('mx-auto w-full max-w-[1440px] flex-1 px-4 pt-14 pb-28 md:px-10 md:pt-11 md:pb-16', className)}>
         {children}
       </main>
-      <TabBar items={TABS} />
+      {tabBar && <TabBar items={TABS} />}
     </div>
   );
 }
