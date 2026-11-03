@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import nextConfig from '../../../next.config';
+import { MAX_TOTAL_RECEIPT_BYTES } from '@/lib/expenses/service';
 import { MAX_AVATAR_BYTES } from './constants';
 
 /** Parses Next's SizeLimit format ("8mb", "512kb", or a plain byte count) into bytes. */
@@ -19,5 +20,10 @@ describe('next.config server action body size limit', () => {
     expect(configuredLimit).toBeDefined();
     const limitBytes = sizeLimitToBytes(configuredLimit!);
     expect(limitBytes).toBeGreaterThan(MAX_AVATAR_BYTES);
+  });
+
+  it('is larger than MAX_TOTAL_RECEIPT_BYTES, so too many receipt photos get the outlay form’s own error', () => {
+    const limitBytes = sizeLimitToBytes(nextConfig.experimental!.serverActions!.bodySizeLimit!);
+    expect(limitBytes).toBeGreaterThan(MAX_TOTAL_RECEIPT_BYTES);
   });
 });

@@ -1,3 +1,4 @@
+import { unusedWrites } from '@/lib/fortnox/testing';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
@@ -29,6 +30,7 @@ function baseClient(overrides: Partial<FortnoxClient> = {}): FortnoxClient {
       year: 1, series: 'A', number: 1, date: '2027-03-01', description: 'x', referenceType: null, referenceNumber: null, comments: null, hasAttachment: false,
       rows: [{ rowIndex: 1, account: 5460, debitSek: 100, creditSek: 0, costCentreCode: 'KOK', fxProjectCode: null, transactionInfo: null, removed: false }],
     }),
+    ...unusedWrites,
     ...overrides,
   };
 }

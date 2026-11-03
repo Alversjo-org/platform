@@ -22,6 +22,21 @@ export type FxVoucherData = {
   rows: FxVoucherRowData[];
 };
 
+/** A voucher to create. Amounts in öre; Fortnox gets kronor. */
+export type FxNewVoucherRow = {
+  account: number; debitOre: number; creditOre: number;
+  costCentre?: string | null; project?: string | null; transactionInformation?: string;
+};
+export type FxNewVoucher = {
+  series: string;
+  transactionDate: string; // YYYY-MM-DD; also picks the financial year (see financialYearId)
+  description: string; // max 200
+  comments: string; // max 1000; used to find the voucher again after a crash
+  rows: FxNewVoucherRow[];
+};
+export type FxVoucherKey = { year: number; series: string; number: number };
+export type FxUploadFile = { fileName: string; contentType: string; data: Buffer };
+
 export interface FortnoxClient {
   getAuthorizationUrl(state: string): string;
   exchangeCode(code: string): Promise<FortnoxTokens>;
@@ -32,7 +47,16 @@ export interface FortnoxClient {
   getFxProjects(accessToken: string): Promise<FxProjectData[]>;
   listVoucherKeys(accessToken: string, financialYear: number): Promise<{ series: string; number: number }[]>;
   getVoucher(accessToken: string, financialYear: number, series: string, number: number): Promise<FxVoucherData>;
+  // Writes (utlägg). financialYearId is Fortnox's financial year id, not a calendar year.
+  ensureVoucherSeries(accessToken: string, code: string, description: string): Promise<void>;
+  createVoucher(accessToken: string, financialYearId: number, voucher: FxNewVoucher): Promise<FxVoucherKey>;
+  findVoucherByComment(accessToken: string, financialYearId: number, series: string, comments: string): Promise<FxVoucherKey | null>;
+  uploadInboxFile(accessToken: string, file: FxUploadFile): Promise<{ fileId: string }>;
+  connectFileToVoucher(accessToken: string, fileId: string, voucher: FxVoucherKey): Promise<void>;
 }
+
+/** The voucher inbox folder ("Verifikationer"), where receipts for vouchers belong. */
+const VOUCHER_INBOX_FOLDER = 'inbox_v';
 
 const AUTH_URL = 'https://apps.fortnox.se/oauth-v1/auth';
 const TOKEN_URL = 'https://apps.fortnox.se/oauth-v1/token';
@@ -66,7 +90,8 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
       headers: { ...init.headers, Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) throw new FortnoxApiError(res.status, path, await res.text());
-    return res.json();
+    const text = await res.text(); // DELETE answers 204 with no body
+    return text ? JSON.parse(text) : null;
   }
 
   /** Pages through a list endpoint until `MetaInformation['@TotalPages']` is reached. */
@@ -82,6 +107,10 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
       page++;
     }
     return items;
+  }
+
+  function postJson(path: string, accessToken: string, body: unknown): Promise<unknown> {
+    return fetchJson(path, accessToken, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) });
   }
 
   async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
@@ -195,6 +224,65 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
           removed: r.Removed,
         })),
       };
+    },
+
+    async ensureVoucherSeries(accessToken, code, description) {
+      try {
+        await fetchJson(`/voucherseries/${encodeURIComponent(code)}`, accessToken);
+      } catch (e) {
+        if (!(e instanceof FortnoxApiError) || (e.status !== 404 && e.status !== 400)) throw e;
+        await postJson('/voucherseries', accessToken, { VoucherSeries: { Code: code, Description: description, Manual: false } });
+      }
+    },
+
+    async createVoucher(accessToken, financialYearId, voucher) {
+      const kronor = (ore: number) => Math.round(ore) / 100;
+      const data = (await postJson(`/vouchers?financialyear=${financialYearId}`, accessToken, {
+        Voucher: {
+          VoucherSeries: voucher.series,
+          TransactionDate: voucher.transactionDate,
+          Description: voucher.description.slice(0, 200),
+          Comments: voucher.comments.slice(0, 1000),
+          VoucherRows: voucher.rows.map((r) => ({
+            Account: r.account,
+            Debit: kronor(r.debitOre),
+            Credit: kronor(r.creditOre),
+            ...(r.costCentre ? { CostCenter: r.costCentre } : {}),
+            ...(r.project ? { Project: r.project } : {}),
+            ...(r.transactionInformation ? { TransactionInformation: r.transactionInformation.slice(0, 100) } : {}),
+          })),
+        },
+      })) as { Voucher: { VoucherSeries: string; VoucherNumber: number; Year: number } };
+      return { year: data.Voucher.Year, series: data.Voucher.VoucherSeries, number: data.Voucher.VoucherNumber };
+    },
+
+    async findVoucherByComment(accessToken, financialYearId, series, comments) {
+      const rows = await fetchAllPages<{ VoucherSeries: string; VoucherNumber: number; Year: number; Comments?: string | null }>(
+        `/vouchers/sublist/${encodeURIComponent(series)}?financialyear=${financialYearId}`, accessToken,
+        (d) => (d as { Vouchers: { VoucherSeries: string; VoucherNumber: number; Year: number; Comments?: string | null }[] }).Vouchers,
+      );
+      const hit = rows.find((v) => (v.Comments ?? '').trim() === comments.trim());
+      return hit ? { year: hit.Year ?? financialYearId, series: hit.VoucherSeries, number: hit.VoucherNumber } : null;
+    },
+
+    async uploadInboxFile(accessToken, file) {
+      const form = new FormData();
+      form.append('file', new Blob([new Uint8Array(file.data)], { type: file.contentType }), file.fileName);
+      const data = (await fetchJson(`/inbox?folderId=${VOUCHER_INBOX_FOLDER}`, accessToken, { method: 'POST', body: form })) as { File: { Id: string } };
+      return { fileId: data.File.Id };
+    },
+
+    async connectFileToVoucher(accessToken, fileId, voucher) {
+      // VoucherYear pins the financial year. Without it Fortnox uses the year currently selected
+      // as default in its UI and silently attaches the file to another year's voucher.
+      const data = (await postJson('/voucherfileconnections', accessToken, {
+        VoucherFileConnection: { FileId: fileId, VoucherNumber: String(voucher.number), VoucherSeries: voucher.series, VoucherYear: voucher.year },
+      })) as { VoucherFileConnection: { VoucherYear?: number; VoucherNumber?: string; VoucherSeries?: string } };
+      const c = data.VoucherFileConnection;
+      if ((c.VoucherYear !== undefined && c.VoucherYear !== voucher.year) || (c.VoucherNumber !== undefined && Number(c.VoucherNumber) !== voucher.number)) {
+        await fetchJson(`/voucherfileconnections/${encodeURIComponent(fileId)}`, accessToken, { method: 'DELETE' }).catch(() => undefined);
+        throw new Error(`Fortnox attached the receipt to ${c.VoucherSeries}${c.VoucherNumber} in year ${c.VoucherYear}, not ${voucher.series}${voucher.number} in year ${voucher.year}; the link was removed again`);
+      }
     },
   };
 }

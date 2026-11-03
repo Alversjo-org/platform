@@ -71,7 +71,11 @@ All of these live in `fly secrets` on `alversjo-platform`, never in the repo
 (spec §4.7): `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`,
 `FLY_API_TOKEN`, `ADMIN_EMAILS`, `CLOUDFLARE_API_TOKEN`, `STRIPE_API_KEY`,
 `STRIPE_WEBHOOK_SECRET`, and the tokens injected into boxes at creation —
-`BOX_CLAUDE_TOKEN`, `BOX_GH_TOKEN_ADMIN`, `BOX_GH_TOKEN_CONTRIBUTOR`. CI
+`BOX_CLAUDE_TOKEN`, `BOX_GH_TOKEN_ADMIN`, `BOX_GH_TOKEN_CONTRIBUTOR`. Outlays
+(`/expenses`) add `BANK_DATA_KEY` (32 random bytes, base64: `openssl rand -base64 32`;
+encrypts members' bank account numbers and payment files — losing it makes them
+unreadable, so keep a copy outside Fly) and, optionally, `ANTHROPIC_API_KEY` (reads
+receipts to pre-fill the outlay form; without it the form is simply empty). CI
 additionally holds a `FLY_API_TOKEN` as a GitHub Actions secret, for the
 deploy job. Non-secret configuration (`PLATFORM_URL`, `BOXES_DOMAIN`,
 `COOKIE_DOMAIN`, `FLY_BOXES_APP`, `BOX_IMAGE`, `EMAIL_FROM`) is in

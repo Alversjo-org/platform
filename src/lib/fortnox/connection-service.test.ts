@@ -1,3 +1,4 @@
+import { unusedWrites } from '@/lib/fortnox/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { FortnoxClient } from './client';
@@ -14,6 +15,7 @@ function fakeClient(overrides: Partial<FortnoxClient> = {}): FortnoxClient {
     refreshTokens: async () => ({ accessToken: 'at2', refreshToken: 'rt2', expiresAt: new Date(Date.now() + 3600_000), scope: 'bookkeeping' }),
     getFinancialYears: async () => [], getAccounts: async () => [], getCostCentres: async () => [], getFxProjects: async () => [],
     listVoucherKeys: async () => [], getVoucher: async () => { throw new Error('not used'); },
+    ...unusedWrites,
     ...overrides,
   };
 }

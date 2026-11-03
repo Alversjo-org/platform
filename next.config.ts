@@ -22,12 +22,13 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Must stay above the profile action's own MAX_AVATAR_BYTES (5MB) — the multipart
-  // request also carries the other form fields and boundaries, and if this limit is
-  // ever at or below that constant, the framework rejects the upload first and the
-  // action's own friendlier "too large" error never gets a chance to fire.
+  // Must stay above the actions' own upload limits — the profile's MAX_AVATAR_BYTES (5MB)
+  // and an outlay's MAX_TOTAL_RECEIPT_BYTES (25MB). The multipart request also carries the
+  // other form fields and boundaries, and if this limit is ever at or below those constants,
+  // the framework rejects the upload first and the action's own friendlier "too large" error
+  // never gets a chance to fire.
   experimental: {
-    serverActions: { bodySizeLimit: '8mb' },
+    serverActions: { bodySizeLimit: '30mb' },
   },
 };
 
