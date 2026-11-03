@@ -6,10 +6,10 @@ import { bookEventAreas } from '@/lib/areas/booking-service';
 import { InvalidCapacityError, upsertEventDetails } from '@/lib/events/details-service';
 import { parseEventDetailsForm } from '@/lib/events/parse-details-form';
 import { createEvent, EventCreationBlockedError } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 
 export async function createEventAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const title = String(formData.get('title') ?? '').trim();
   const summary = String(formData.get('summary') ?? '').trim();
   const body = String(formData.get('body') ?? '').trim();

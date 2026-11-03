@@ -10,11 +10,11 @@ import { assertEventPermission, NotAuthorizedError } from '@/lib/projects/author
 import {
   duplicateEvent, EventCreationBlockedError, getProjectBySlug, IncompleteEventError, InvalidTransitionError, transitionStatus,
 } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 import type { ProjectStatus } from '@/db/schema';
 
 export async function duplicateEventAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const slug = String(formData.get('slug'));
   const db = await getDb();
   const source = await getProjectBySlug(db, slug);
@@ -32,7 +32,7 @@ export async function duplicateEventAction(formData: FormData) {
 }
 
 export async function signUpAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const slug = String(formData.get('slug'));
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
@@ -48,7 +48,7 @@ export async function signUpAction(formData: FormData) {
 }
 
 export async function cancelSignupAction(formData: FormData) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const slug = String(formData.get('slug'));
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
@@ -68,7 +68,7 @@ export async function cancelSignupAction(formData: FormData) {
 }
 
 async function transition(slug: string, to: ProjectStatus) {
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();

@@ -20,7 +20,7 @@ import { getEventDetails } from '@/lib/events/details-service';
 import { listProjectGroups } from '@/lib/project-groups/service';
 import { assertEventPermission, getEventRole, NotAuthorizedError } from '@/lib/projects/authorization';
 import { ALLOWED_TRANSITIONS, getProjectBySlug } from '@/lib/projects/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 import { oreToSek } from '@/lib/money';
 import { splitStockholmDateAndTime, utcToStockholmWallClock } from '@/lib/timezone';
 import { archiveEventAction, cancelEventAction, closeEventAction, publishAction } from '../actions';
@@ -41,7 +41,7 @@ export default async function EditEventPage({
 }) {
   const { slug } = await params;
   const { error, warning } = await searchParams;
-  const user = await requireUser();
+  const user = await requireEventAccess();
   const db = await getDb();
   const project = await getProjectBySlug(db, slug);
   if (!project) notFound();
@@ -62,9 +62,9 @@ export default async function EditEventPage({
   const ends = details ? splitStockholmDateAndTime(details.endsAt) : { date: '', time: null };
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20 [&>*]:max-w-3xl">
       <div className="mb-4 flex items-center gap-2">
-        <h1 className="text-xl font-semibold">Edit: {project.title}</h1>
+        <h1 className="font-serif text-[36px] leading-tight font-bold md:text-[52px]">Edit: {project.title}</h1>
         <Badge variant="secondary">{project.status}</Badge>
       </div>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}

@@ -14,8 +14,8 @@ export default async function ImportBudgetPage({ searchParams }: { searchParams:
   const { error } = await searchParams;
 
   return (
-    <AppShell user={treasurer}>
-      <h1 className="mb-4 text-xl font-semibold">Import budget</h1>
+    <AppShell user={treasurer} className="md:px-20">
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Import budget</h1>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       <Card className="max-w-lg">
         <CardHeader><CardTitle>Paste the budget CSV</CardTitle></CardHeader>

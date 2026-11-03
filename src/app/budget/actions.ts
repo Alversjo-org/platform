@@ -25,8 +25,10 @@ function parseLineInput(formData: FormData) {
   };
 }
 
-function redirectWithYear(fiscalYear: string, error?: string): never {
+function redirectWithYear(fiscalYear: string, error?: string, kind?: FormDataEntryValue | null): never {
   const params = new URLSearchParams({ year: fiscalYear });
+  // Back to the tab the line was on.
+  if (kind === 'income' || kind === 'allocation') params.set('kind', kind);
   if (error) params.set('error', error);
   redirect(`/budget?${params.toString()}`);
 }
@@ -46,11 +48,11 @@ export async function addLineAction(formData: FormData) {
   try {
     await upsertBudgetAmount(await getDb(), { annualBudgetId, ...parseLineInput(formData) });
   } catch (e) {
-    if (e instanceof BudgetVersionNotEditableError) redirectWithYear(fiscalYear, 'This budget is no longer editable — reload the page.');
+    if (e instanceof BudgetVersionNotEditableError) redirectWithYear(fiscalYear, 'This budget is no longer editable — reload the page.', formData.get('kind'));
     throw e;
   }
   revalidatePath('/budget');
-  redirectWithYear(fiscalYear);
+  redirectWithYear(fiscalYear, undefined, formData.get('kind'));
 }
 
 export async function updateLineAction(formData: FormData) {
@@ -61,11 +63,11 @@ export async function updateLineAction(formData: FormData) {
   try {
     await upsertBudgetAmount(await getDb(), { id, annualBudgetId, ...parseLineInput(formData) });
   } catch (e) {
-    if (e instanceof BudgetVersionNotEditableError) redirectWithYear(fiscalYear, 'This budget is no longer editable — reload the page.');
+    if (e instanceof BudgetVersionNotEditableError) redirectWithYear(fiscalYear, 'This budget is no longer editable — reload the page.', formData.get('kind'));
     throw e;
   }
   revalidatePath('/budget');
-  redirectWithYear(fiscalYear);
+  redirectWithYear(fiscalYear, undefined, formData.get('kind'));
 }
 
 export async function deleteLineAction(formData: FormData) {
@@ -75,11 +77,11 @@ export async function deleteLineAction(formData: FormData) {
   try {
     await deleteBudgetAmount(await getDb(), id);
   } catch (e) {
-    if (e instanceof BudgetVersionNotEditableError) redirectWithYear(fiscalYear, 'This budget is no longer editable — reload the page.');
+    if (e instanceof BudgetVersionNotEditableError) redirectWithYear(fiscalYear, 'This budget is no longer editable — reload the page.', formData.get('kind'));
     throw e;
   }
   revalidatePath('/budget');
-  redirectWithYear(fiscalYear);
+  redirectWithYear(fiscalYear, undefined, formData.get('kind'));
 }
 
 export async function approveAction(formData: FormData) {

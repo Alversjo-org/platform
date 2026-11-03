@@ -11,21 +11,21 @@ import { CapacityFieldset } from '@/components/events/capacity-fieldset';
 import { DateRangeFields } from '@/components/events/date-range-fields';
 import { getDb } from '@/db';
 import { listAreas } from '@/lib/areas/service';
-import { requireUser } from '@/lib/session';
+import { requireEventAccess } from '@/lib/session';
 import { createEventAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function NewEventPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const user = await requireUser();
-  const { error } = await searchParams;
+export default async function NewEventPage({ searchParams }: { searchParams: Promise<{ error?: string; area?: string }> }) {
+  const user = await requireEventAccess();
+  const { error, area } = await searchParams;
   const db = await getDb();
   const areas = await listAreas(db);
   return (
-    <AppShell user={user}>
-      <h1 className="mb-4 text-xl font-semibold">New event</h1>
+    <AppShell user={user} className="md:px-20">
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">New event</h1>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
-      <form action={createEventAction} className="space-y-6">
+      <form action={createEventAction} className="max-w-3xl space-y-6">
         <Card>
           <CardHeader><CardTitle>Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -57,8 +57,8 @@ export default async function NewEventPage({ searchParams }: { searchParams: Pro
               <div className="space-y-2"><Label htmlFor="priceNote">Price note</Label><Input id="priceNote" name="priceNote" /></div>
             </div>
             <div className="space-y-2"><Label htmlFor="contactNote">Contact note</Label><Textarea id="contactNote" name="contactNote" /></div>
-            <AddSectionToggle label="+ Add area">
-              <AreaCheckboxes areas={areas} />
+            <AddSectionToggle label="+ Add area" defaultOpen={areas.some((a) => a.id === area)}>
+              <AreaCheckboxes areas={areas} defaultCheckedAreaIds={area ? [area] : []} />
             </AddSectionToggle>
           </CardContent>
         </Card>
