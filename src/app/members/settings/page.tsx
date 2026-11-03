@@ -15,8 +15,8 @@ export default async function RenewalMessageSettingsPage() {
   const admin = await requireMemberAdmin();
   const message = await getRenewalMessage(await getDb());
   return (
-    <AppShell user={admin}>
-      <h1 className="mb-4 text-xl font-semibold">Renewal message</h1>
+    <AppShell user={admin} className="md:px-20">
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Renewal message</h1>
       <Card className="max-w-lg">
         <CardHeader><CardTitle>Default renewal ask</CardTitle></CardHeader>
         <CardContent>

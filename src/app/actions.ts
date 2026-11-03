@@ -1,8 +1,10 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getDb, schema } from '@/db';
+import { getAuth } from '@/lib/auth';
 import { UserNotFoundError } from '@/lib/members/service';
 import { requireUser } from '@/lib/session';
 import { createCheckoutSession, type MembershipPlan } from '@/lib/stripe/checkout';
@@ -27,4 +29,10 @@ export async function startCheckoutAction(formData: FormData) {
   const platformUrl = process.env.PLATFORM_URL ?? 'http://localhost:3000';
   const url = await createCheckoutSession(getStripe(), { plan, user: member, platformUrl });
   redirect(url);
+}
+
+export async function signOutAction() {
+  const auth = await getAuth();
+  await auth.api.signOut({ headers: await headers() });
+  redirect('/login');
 }

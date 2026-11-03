@@ -1,6 +1,6 @@
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { describe, expect, it } from 'vitest';
-import { combinePolygons, InvalidGeometryError, labelPoint, parseAreaGeometry, splitPolygons } from './geometry';
+import { combinePolygons, hectares, InvalidGeometryError, labelPoint, parseAreaGeometry, splitPolygons } from './geometry';
 
 const square = [[14.925, 57.621], [14.926, 57.621], [14.926, 57.622], [14.925, 57.622], [14.925, 57.621]];
 
@@ -41,5 +41,14 @@ describe('labelPoint', () => {
     const g = parseAreaGeometry({ type: 'Polygon', coordinates: [square] });
     const [lat, lng] = labelPoint(g);
     expect(booleanPointInPolygon([lng, lat], g)).toBe(true);
+  });
+});
+
+describe('hectares', () => {
+  it('measures a 100 m square as one hectare', () => {
+    // 100 m north-south is 0.000899° of latitude; 100 m east-west at 57.62° is 0.001678° of longitude.
+    const [lon, lat] = [14.92, 57.62];
+    const ring = [[lon, lat], [lon + 0.0016777, lat], [lon + 0.0016777, lat + 0.00089932], [lon, lat + 0.00089932], [lon, lat]];
+    expect(hectares({ type: 'Polygon', coordinates: [ring] })).toBeCloseTo(1, 2);
   });
 });

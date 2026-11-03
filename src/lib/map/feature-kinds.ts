@@ -5,8 +5,8 @@
 export type ShapeFamily = 'point' | 'line' | 'polygon';
 
 export const MAP_LAYERS = [
-  { id: 'borders', label: 'Property border', defaultOn: true },
-  { id: 'places', label: 'Places (barns, water, toilets)', defaultOn: true },
+  { id: 'borders', label: 'Property border', defaultOn: false },
+  { id: 'places', label: 'Places (barns, water, toilets)', defaultOn: false },
   { id: 'buildings', label: 'Buildings', defaultOn: false },
   { id: 'water', label: 'Lakes & water protection zone', defaultOn: false },
   { id: 'paths', label: 'Paths', defaultOn: false },

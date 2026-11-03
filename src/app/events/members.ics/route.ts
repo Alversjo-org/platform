@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { getDb, schema } from '@/db';
 import { buildFeedIcs } from '@/lib/events/ical';
 import { getUserByIcalToken } from '@/lib/members/service';
+import { canSeeEvents, rolesFor } from '@/lib/session';
 
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get('token');
@@ -9,6 +10,9 @@ export async function GET(req: Request) {
   const db = await getDb();
   const user = await getUserByIcalToken(db, token);
   if (!user) return new Response(null, { status: 404 });
+  // The feed URL outlives the membership: once it lapses, the calendar app gets nothing.
+  const roles = await rolesFor(db, user.id);
+  if (!(await canSeeEvents({ id: user.id, email: user.email, roles }))) return new Response(null, { status: 404 });
 
   const rows = await db.select({ project: schema.project, details: schema.eventDetails })
     .from(schema.project)

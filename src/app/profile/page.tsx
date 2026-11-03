@@ -5,7 +5,7 @@ import { AppShell } from '@/components/app-shell';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { requireUser } from '@/lib/session';
@@ -20,10 +20,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const [member] = await db.select().from(schema.user).where(eq(schema.user.id, sessionUser.id));
 
   return (
-    <AppShell user={sessionUser}>
+    <AppShell user={sessionUser} className="md:px-20">
+      <h1 className="mb-6 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Your profile</h1>
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
-      <Card className="max-w-md">
-        <CardHeader><CardTitle>Edit profile</CardTitle></CardHeader>
+      <Card className="max-w-md pt-6">
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Avatar image={member.image ?? null} name={member.name} email={member.email} className="size-16 text-lg" />

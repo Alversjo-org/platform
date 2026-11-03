@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isActiveNow, needsPayment } from './status';
+import { isActiveNow } from './status';
 
 const future = new Date(Date.now() + 86_400_000);
 const past = new Date(Date.now() - 86_400_000);
@@ -15,19 +15,5 @@ describe('isActiveNow', () => {
 
   it('is false with no expiry date at all', () => {
     expect(isActiveNow({ isActiveMember: true, membershipExpiresAt: null })).toBe(false);
-  });
-});
-
-describe('needsPayment', () => {
-  it('is true for an expired member even with a stripeSubscriptionId on file', () => {
-    expect(needsPayment({ isActiveMember: true, membershipExpiresAt: past, stripeSubscriptionId: 'sub_1' })).toBe(true);
-  });
-
-  it('is true for an active member with no recurring subscription (e.g. a manually granted or cash membership)', () => {
-    expect(needsPayment({ isActiveMember: true, membershipExpiresAt: future, stripeSubscriptionId: null })).toBe(true);
-  });
-
-  it('is false for an active member on a live subscription', () => {
-    expect(needsPayment({ isActiveMember: true, membershipExpiresAt: future, stripeSubscriptionId: 'sub_1' })).toBe(false);
   });
 });

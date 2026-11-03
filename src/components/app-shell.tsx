@@ -1,37 +1,82 @@
 import { eq } from 'drizzle-orm';
 import Image from 'next/image';
 import Link from 'next/link';
+import { signOutAction } from '@/app/actions';
 import { getDb, schema } from '@/db';
+import { DesktopNavLinks, TabBar, type NavItem } from '@/components/nav-links';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
+import { cn } from 'cn';
 import { ROLE_LABELS } from '@/lib/roles/labels';
 import { hasAnyRole, isMemberAdmin, isTreasurer, type SessionUser } from '@/lib/session';
 
-export async function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
+export async function loadProfile(userId: string) {
   const db = await getDb();
   const [profile] = await db
     .select({ name: schema.user.name, nickname: schema.user.nickname, image: schema.user.image })
     .from(schema.user)
-    .where(eq(schema.user.id, user.id));
-  const name = profile?.name ?? '';
-  const image = profile?.image ?? null;
-  const displayName = profile?.nickname || name || user.email;
+    .where(eq(schema.user.id, userId));
+  return { name: profile?.name ?? '', nickname: profile?.nickname ?? null, image: profile?.image ?? null };
+}
+
+/** Desktop nav links, gated by role as before. Budget stands for all three finance pages. */
+export function desktopNavItems(user: SessionUser): NavItem[] {
+  return [
+    { href: '/events', label: 'Events' },
+    { href: '/map', label: 'Map' },
+    { href: '/boxes', label: 'Boxes' },
+    { href: '/expenses', label: 'Outlays' },
+    ...(isMemberAdmin(user) ? [{ href: '/members', label: 'Members' }] : []),
+    ...(hasAnyRole(user, ['admin', 'mapper']) ? [{ href: '/areas', label: 'Areas' }] : []),
+    ...(hasAnyRole(user, ['admin', 'role-admin']) ? [{ href: '/roles', label: 'Roles' }] : []),
+    ...(isTreasurer(user) ? [{ href: '/budget', label: 'Budget', also: ['/project-groups', '/fortnox'] }] : []),
+  ];
+}
+
+const TABS: NavItem[] = [
+  { href: '/', label: 'Home' },
+  { href: '/events', label: 'Events' },
+  { href: '/map', label: 'Map' },
+  { href: '/more', label: 'More' },
+];
+
+/**
+ * The page frame: a backdrop (photo and wash, or plain snow), the floating glass nav on
+ * desktop and the tab bar on phones. `theme="dark"` turns the page's tokens to the night
+ * palette, whatever the system setting.
+ */
+export async function AppShell({ user, children, theme = 'light', backdrop, className, tabBar = true }: {
+  user: SessionUser;
+  children: React.ReactNode;
+  theme?: 'light' | 'dark';
+  backdrop?: React.ReactNode;
+  className?: string;
+  /** Off for pages with their own bottom bar on phones (the event page's Sign up). */
+  tabBar?: boolean;
+}) {
+  const { name, nickname, image } = await loadProfile(user.id);
+  const displayName = nickname || name || user.email;
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-5xl p-6">
-      <header className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-            <Image src="/alversjo-logo.png" alt="" width={32} height={32} />
-            Alversjö
+    <div className={cn('relative flex min-h-svh flex-col text-foreground', theme === 'dark' && 'dark')}>
+      {backdrop ?? (
+        // Pages without a photo: snow with a soft sun wash at the top.
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-snow bg-[radial-gradient(ellipse_at_top,rgb(242_193_78/0.16),transparent_60%)]" />
+      )}
+      <header className="sticky top-7 z-40 mx-auto mt-7 hidden w-full max-w-[1440px] px-10 md:block">
+        <div className="glass flex h-[68px] items-center gap-1 rounded-full p-3">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5 pr-[18px]">
+            <Image src="/alversjo-logo.png" alt="" width={44} height={44} className="size-11" />
+            <span className="font-serif text-[22px] font-bold">Alversjö</span>
           </Link>
+          <DesktopNavLinks items={desktopNavItems(user)} />
+          <div className="flex-1" />
           <DropdownMenu>
-            <DropdownMenuTrigger aria-label="Account menu" className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-              <Avatar image={image} name={name} email={user.email} />
+            <DropdownMenuTrigger aria-label="Account menu" className="shrink-0 rounded-full">
+              <Avatar image={image} name={name} email={user.email} className="size-11 text-sm font-semibold" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="flex items-center gap-2 px-1.5 py-1.5">
@@ -48,24 +93,17 @@ export async function AppShell({ user, children }: { user: SessionUser; children
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem render={<Link href="/profile" />}>Edit profile</DropdownMenuItem>
+              <DropdownMenuItem nativeButton render={<button type="submit" form="sign-out" />} className="w-full">Sign out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          {/* The menu renders in a portal, so its Sign out item submits this form by id. */}
+          <form id="sign-out" action={signOutAction} hidden />
         </div>
-        <nav className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Link href="/events" className="text-sm text-muted-foreground hover:text-foreground">Events</Link>
-          <Link href="/map" className="text-sm text-muted-foreground hover:text-foreground">Map</Link>
-          <Link href="/boxes" className="text-sm text-muted-foreground hover:text-foreground">Boxes</Link>
-          <Link href="/expenses" className="text-sm text-muted-foreground hover:text-foreground">Outlays</Link>
-          {isMemberAdmin(user) && <Link href="/members" className="text-sm text-muted-foreground hover:text-foreground">Members</Link>}
-          {hasAnyRole(user, ['admin', 'mapper']) && <Link href="/areas" className="text-sm text-muted-foreground hover:text-foreground">Areas</Link>}
-          {hasAnyRole(user, ['admin', 'role-admin']) && <Link href="/roles" className="text-sm text-muted-foreground hover:text-foreground">Roles</Link>}
-          {isTreasurer(user) && <Link href="/fortnox" className="text-sm text-muted-foreground hover:text-foreground">Fortnox</Link>}
-          {isTreasurer(user) && <Link href="/budget" className="text-sm text-muted-foreground hover:text-foreground">Budget</Link>}
-          {isTreasurer(user) && <Link href="/project-groups" className="text-sm text-muted-foreground hover:text-foreground">Project groups</Link>}
-        </nav>
       </header>
-      <Separator className="my-4" />
-      <main>{children}</main>
+      <main className={cn('mx-auto w-full max-w-[1440px] flex-1 px-4 pt-14 pb-28 md:px-10 md:pt-11 md:pb-16', className)}>
+        {children}
+      </main>
+      {tabBar && <TabBar items={TABS} />}
     </div>
   );
 }

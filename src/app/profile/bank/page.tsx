@@ -22,7 +22,7 @@ export default async function BankAccountPage({ searchParams }: { searchParams: 
   const showForm = !account || edit === '1' || Boolean(error);
 
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       <p className="mb-2 text-sm"><Link href="/profile" className="underline">← Profile</Link></p>
       <Card className="max-w-md">
         <CardHeader><CardTitle>Payout bank account</CardTitle></CardHeader>

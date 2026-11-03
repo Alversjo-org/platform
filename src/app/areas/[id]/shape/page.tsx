@@ -19,9 +19,8 @@ export default async function AreaShapePage({ params }: { params: Promise<{ id: 
     .filter((a) => a.id !== id && a.geometry)
     .map((a) => ({ id: a.id, name: a.name, geometry: a.geometry! }));
   return (
-    <AppShell user={user}>
-      <h1 className="mb-4 text-xl font-semibold">Edit shape: {area.name}</h1>
-      <AreaShapeEditor areaId={id} initial={area.geometry} others={others} features={toMapFeatureData(features)} />
+    <AppShell user={user} theme="dark">
+      <AreaShapeEditor areaId={id} areaName={area.name} initial={area.geometry} others={others} features={toMapFeatureData(features)} />
     </AppShell>
   );
 }

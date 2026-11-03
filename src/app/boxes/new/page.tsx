@@ -14,7 +14,7 @@ export default async function NewBoxPage({ searchParams }: { searchParams: Promi
   const user = await requireAdmin();
   const { error } = await searchParams;
   return (
-    <AppShell user={user}>
+    <AppShell user={user} className="md:px-20">
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>

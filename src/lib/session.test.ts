@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
+
+let currentDb: Db;
+vi.mock('@/db', async (orig) => ({ ...(await orig<typeof import('@/db')>()), getDb: async () => currentDb }));
+
 import {
-  ADMIN_ROLES, hasAnyRole, isMemberAdmin, isTreasurer, MAPPER_ROLES, MEMBER_ADMIN_ROLES, ROLE_ADMIN_ROLES, rolesFor, TREASURER_ROLES,
+  ADMIN_ROLES, canSeeEvents, hasAnyRole, isMemberAdmin, isTreasurer, MAPPER_ROLES, MEMBER_ADMIN_ROLES, ROLE_ADMIN_ROLES, rolesFor, TREASURER_ROLES,
 } from './session';
 
 describe('hasAnyRole', () => {
@@ -74,5 +78,22 @@ describe('rolesFor', () => {
     ]);
     expect((await rolesFor(db, 'u1')).sort()).toEqual(['admin', 'mapper']);
     expect(await rolesFor(db, 'u2')).toEqual([]);
+  });
+});
+
+describe('canSeeEvents', () => {
+  const day = 24 * 60 * 60 * 1000;
+  it('admits paid members and admins, not lapsed or unpaid members', async () => {
+    currentDb = await createDb('pglite://memory');
+    await currentDb.insert(schema.user).values([
+      { id: 'paid', email: 'paid@example.org', isActiveMember: true, membershipExpiresAt: new Date(Date.now() + 30 * day) },
+      { id: 'lapsed', email: 'lapsed@example.org', isActiveMember: true, membershipExpiresAt: new Date(Date.now() - day) },
+      { id: 'never', email: 'never@example.org' },
+      { id: 'admin', email: 'admin@example.org' },
+    ]);
+    expect(await canSeeEvents({ id: 'paid', email: 'paid@example.org', roles: [] })).toBe(true);
+    expect(await canSeeEvents({ id: 'lapsed', email: 'lapsed@example.org', roles: [] })).toBe(false);
+    expect(await canSeeEvents({ id: 'never', email: 'never@example.org', roles: ['mapper'] })).toBe(false);
+    expect(await canSeeEvents({ id: 'admin', email: 'admin@example.org', roles: ['admin'] })).toBe(true);
   });
 });

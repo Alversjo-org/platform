@@ -10,6 +10,20 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
+  --font-serif: "Iowan Old Style", var(--font-newsreader), Georgia, serif;
+  --color-snow: var(--snow);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-forest: var(--forest);
+  --color-sun: var(--sun);
+  --color-night: var(--night);
+  --color-lantern: var(--lantern);
+  --color-paper: var(--paper);
+  --color-good: var(--good);
+  --color-good-ink: var(--good-ink);
+  --color-field: var(--field);
+  --color-ghost: var(--ghost);
+  --color-ghost-border: var(--ghost-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,78 +62,113 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Alversjö design tokens (design/handoff tokens.md). Light is the default; dark pages
+   (Events, Event, Map, Fortnox) put `.dark` on their wrapper, whatever the system says. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --snow: #f6f4ee;
+  --ink: #1e2420;
+  --ink-soft: #4a524c;
+  --forest: #2f3d2e;
+  --sun: #f2c14e;
+  --night: #1a1238;
+  --lantern: #c86bd9;
+  --lantern-deep: #6b5bd9;
+  --paper: #f4f0e6;
+  --good: #3e8e5a;
+  --good-ink: #1f5133;
+  --teal: #7fd1b9;
+  --danger-ink: #6e1f17;
+
+  --background: var(--snow);
+  --foreground: var(--ink);
+  --card: rgb(255 255 255 / 0.66);
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--forest);
+  --primary-foreground: var(--snow);
+  --secondary: rgb(47 61 46 / 0.08);
+  --secondary-foreground: var(--ink);
+  --muted: rgb(47 61 46 / 0.06);
+  --muted-foreground: var(--ink-soft);
+  --accent: rgb(47 61 46 / 0.08);
+  --accent-foreground: var(--ink);
+  --destructive: #e7000b;
+  --border: rgb(47 61 46 / 0.14);
+  --input: rgb(47 61 46 / 0.12);
+  --ring: var(--sun);
+  --field: rgb(255 255 255 / 0.85);
+  --ghost: rgb(255 255 255 / 0.55);
+  --ghost-border: rgb(47 61 46 / 0.18);
+  --chart-1: var(--forest);
+  --chart-2: var(--sun);
+  --chart-3: var(--lantern);
+  --chart-4: var(--teal);
+  --chart-5: var(--ink-soft);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Glass panel */
+  --glass-border: rgb(255 255 255 / 0.5);
+  --glass-shadow: 0 4px 48px rgb(0 0 0 / 0.14);
+  --glass-blur: 14px;
+
+  --sidebar: var(--snow);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--forest);
+  --sidebar-primary-foreground: var(--snow);
+  --sidebar-accent: rgb(47 61 46 / 0.08);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: rgb(47 61 46 / 0.14);
+  --sidebar-ring: var(--sun);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: var(--night);
+  --foreground: #ffffff;
+  --card: rgb(26 18 56 / 0.5);
+  --card-foreground: #ffffff;
+  --popover: #241a4a;
+  --popover-foreground: #ffffff;
+  --primary: var(--sun);
+  --primary-foreground: var(--ink);
+  --secondary: rgb(255 255 255 / 0.1);
+  --secondary-foreground: #ffffff;
+  --muted: rgb(255 255 255 / 0.08);
+  --muted-foreground: rgb(255 255 255 / 0.72);
+  --accent: rgb(255 255 255 / 0.12);
+  --accent-foreground: #ffffff;
+  --destructive: #ff6b5e;
+  --border: rgb(255 255 255 / 0.16);
+  --input: rgb(255 255 255 / 0.2);
+  --field: rgb(255 255 255 / 0.1);
+  --ghost: rgb(255 255 255 / 0.1);
+  --ghost-border: rgb(255 255 255 / 0.3);
+
+  --glass-border: rgb(255 255 255 / 0.16);
+  --glass-shadow: 0 4px 48px rgb(0 0 0 / 0.35);
+  --glass-blur: 18px;
+
+  --sidebar: var(--night);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: var(--sun);
+  --sidebar-primary-foreground: var(--ink);
+  --sidebar-accent: rgb(255 255 255 / 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.16);
+  --sidebar-ring: var(--sun);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  /* One focus ring everywhere, on both themes: 2px sun, 2px offset. */
+  :focus-visible {
+    outline: 2px solid var(--sun);
+    outline-offset: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
   body {
     @apply bg-background text-foreground;
@@ -128,20 +177,151 @@
     @apply font-sans;
   }
 }
-/* Area names on the Leaflet map: plain outlined text, not the default tooltip bubble. */
-.leaflet-tooltip.map-area-label {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  color: #fff;
-  font-weight: 600;
-  text-shadow: 0 0 3px #000, 0 0 2px #000;
+/* Frosted glass: the main surface. */
+@utility glass {
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  /* Not a plain backdrop-filter: the CSS minifier keeps only the -webkit- copy of it. */
+  @apply backdrop-blur-(--glass-blur);
 }
 
-/* The draggable point in the map feature editor. */
+/* The draggable point in the map feature editor: ringed in sun (screen 17). */
 .map-edit-point {
-  background: #2563eb;
+  background: var(--sun);
   border: 3px solid #fff;
   border-radius: 9999px;
   box-shadow: 0 0 0 1px #0006, 0 1px 4px #0008;
+}
+
+/* Member map (screens 05–06): area name chips, icon badges, popups and the credits. */
+.leaflet-tooltip.map-area-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(26 18 56 / 0.72);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font: 600 13px/1.2 var(--font-sans);
+  white-space: nowrap;
+}
+.leaflet-tooltip.map-area-chip::before {
+  display: none;
+}
+.leaflet-tooltip.map-area-chip.is-selected {
+  background: #fff;
+  color: var(--ink);
+}
+.map-area-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.map-point-badge > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.35);
+  box-sizing: border-box;
+}
+.alv-map.leaflet-container .leaflet-popup-content-wrapper {
+  border-radius: 22px;
+  background: rgb(26 18 56 / 0.82);
+  backdrop-filter: blur(18px);
+  color: #fff;
+  box-shadow: 0 4px 32px rgb(0 0 0 / 0.35);
+}
+.alv-map.leaflet-container .leaflet-popup-tip {
+  background: rgb(26 18 56 / 0.82);
+}
+.alv-map.leaflet-container .leaflet-popup-content {
+  margin: 16px 20px;
+  font: 14px/1.45 var(--font-sans);
+}
+.alv-map.leaflet-container a.leaflet-popup-close-button {
+  color: rgb(255 255 255 / 0.7);
+}
+.map-popup-title {
+  display: block;
+  font: 700 22px/1.2 var(--font-serif);
+}
+.map-popup-kind {
+  margin-top: 2px;
+  color: rgb(255 255 255 / 0.7);
+}
+.map-popup p {
+  margin: 8px 0 0;
+}
+.alv-map.leaflet-container a.map-popup-edit {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--sun);
+  font-weight: 600;
+}
+.alv-map.leaflet-container .leaflet-control-attribution {
+  margin: 0 40px 12px 0;
+  border-radius: 6px;
+  background: rgb(26 18 56 / 0.6);
+  color: rgb(255 255 255 / 0.85);
+  font-size: 11px;
+}
+.alv-map.leaflet-container .leaflet-control-attribution a {
+  color: #fff;
+}
+.alv-map.leaflet-container .leaflet-control-scale {
+  margin: 0 0 40px 104px;
+}
+.alv-map.leaflet-container .leaflet-control-scale-line {
+  border: 2px solid #fff;
+  border-top: 0;
+  background: transparent;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+}
+@media (width < 48rem) {
+  .alv-map.leaflet-container .leaflet-control-attribution {
+    margin: 0 8px 92px 0;
+    font-size: 10px;
+  }
+  .alv-map.leaflet-container .leaflet-control-scale {
+    margin: 0 0 96px 12px;
+  }
+}
+.alv-map.leaflet-container .leaflet-tooltip:not(.map-area-chip) {
+  border: 0;
+  border-radius: 10px;
+  background: rgb(26 18 56 / 0.85);
+  color: #fff;
+  font: 600 12px/1.3 var(--font-sans);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.3);
+}
+.alv-map.leaflet-container .leaflet-tooltip:not(.map-area-chip)::before {
+  display: none;
+}
+
+/* Outline editor (screen 16): white corner handles, smaller faded midpoints. */
+.alv-map.leaflet-container .marker-icon {
+  width: 14px !important;
+  height: 14px !important;
+  margin: -7px 0 0 -7px !important;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+}
+.alv-map.leaflet-container .marker-icon:active {
+  background: var(--sun);
+}
+.alv-map.leaflet-container .marker-icon.marker-icon-middle {
+  width: 9px !important;
+  height: 9px !important;
+  margin: -4.5px 0 0 -4.5px !important;
+  opacity: 0.75;
 }

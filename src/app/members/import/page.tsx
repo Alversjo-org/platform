@@ -19,8 +19,8 @@ export default async function ImportMembersPage({
   const errorEmails = errorEmail === undefined ? [] : Array.isArray(errorEmail) ? errorEmail : [errorEmail];
 
   return (
-    <AppShell user={admin}>
-      <h1 className="mb-4 text-xl font-semibold">Import members</h1>
+    <AppShell user={admin} className="md:px-20">
+      <h1 className="mb-4 font-serif text-[36px] leading-tight font-bold md:text-[52px]">Import members</h1>
       <Card className="max-w-lg">
         <CardHeader><CardTitle>Paste CSV (name,email,membershipExpiresAt,lastContactedAt,contactNotes)</CardTitle></CardHeader>
         <CardContent>
