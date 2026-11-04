@@ -218,8 +218,10 @@ export function createFortnoxClient(fetchImpl: typeof fetch = fetch): FortnoxCli
           account: r.Account,
           debitSek: Math.round(r.Debit * 100),
           creditSek: Math.round(r.Credit * 100),
-          costCentreCode: r.CostCenter,
-          fxProjectCode: r.Project,
+          // Fortnox sends "" (not null) for a row without a cost centre or project; storing ""
+          // would break the foreign keys to fx_cost_centre / fx_project.
+          costCentreCode: r.CostCenter || null,
+          fxProjectCode: r.Project || null,
           transactionInfo: r.Transactioninformation,
           removed: r.Removed,
         })),

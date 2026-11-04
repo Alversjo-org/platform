@@ -54,6 +54,18 @@ describe('createFortnoxClient', () => {
     expect(accounts.map((a) => a.number)).toEqual([1000, 2000]);
     expect(urls).toHaveLength(2);
   });
+
+  it('reads an empty cost centre or project on a voucher row as none', async () => {
+    const fakeFetch = (async () => new Response(JSON.stringify({ Voucher: {
+      VoucherSeries: 'A', VoucherNumber: 1, TransactionDate: '2026-11-01', Description: 'x', ReferenceType: null, ReferenceNumber: null, Comments: null,
+      VoucherRows: [
+        { Account: 6990, Debit: 100, Credit: 0, CostCenter: '', Project: '', Transactioninformation: '', Removed: false },
+        { Account: 1930, Debit: 0, Credit: 100, CostCenter: 'BAST', Project: '7', Transactioninformation: '', Removed: false },
+      ],
+    } }), { status: 200 })) as typeof fetch;
+    const voucher = await createFortnoxClient(fakeFetch).getVoucher('token', 1, 'A', 1);
+    expect(voucher.rows.map((r) => [r.costCentreCode, r.fxProjectCode])).toEqual([[null, null], ['BAST', '7']]);
+  });
 });
 
 describe('Fortnox writes', () => {
