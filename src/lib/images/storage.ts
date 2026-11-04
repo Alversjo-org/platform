@@ -1,10 +1,23 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, NoSuchKey, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
+/**
+ * Images are private: `put` returns an app URL (`/images/<key>`), and the /images route
+ * (members only) reads them back through `get`. No bucket URL is ever handed to a browser.
+ */
 export interface ImageStorage {
   put(key: string, buffer: Buffer, contentType: string): Promise<string>;
+  get(key: string): Promise<{ buffer: Buffer; contentType: string } | null>;
   delete(key: string): Promise<void>;
+}
+
+const SERVABLE_PREFIXES = ['wiki', 'tasks'];
+
+/** Whether the /images route may serve this key: a known prefix, plain single-segment names, no traversal. */
+export function isServableImageKey(segments: string[]): boolean {
+  if (segments.length < 2 || !SERVABLE_PREFIXES.includes(segments[0])) return false;
+  return segments.every((seg) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(seg) && seg !== '..');
 }
 
 export const DEFAULT_LOCAL_IMAGE_DIR = path.join(process.cwd(), '.data', 'images');
@@ -29,14 +42,19 @@ export class LocalImageStorage implements ImageStorage {
     return `/images/${key}`;
   }
 
+  async get(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const file = resolveImagePath(this.baseDir, key);
+    try {
+      return { buffer: await readFile(file), contentType: 'image/webp' };
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw e;
+    }
+  }
+
   async delete(key: string): Promise<void> {
     await rm(resolveImagePath(this.baseDir, key), { force: true });
   }
-}
-
-/** Public object URL for a Tigris bucket: `https://<bucket>.<endpoint host>/<key>` (bucket must be created public). */
-export function tigrisPublicUrl(endpoint: string, bucket: string, key: string): string {
-  return `https://${bucket}.${new URL(endpoint).host}/${key}`;
 }
 
 export class TigrisImageStorage implements ImageStorage {
@@ -59,8 +77,18 @@ export class TigrisImageStorage implements ImageStorage {
     await this.client.send(
       new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: buffer, ContentType: contentType }),
     );
-    // Not yet verified against a live bucket (none exists in the org yet) — confirm after `fly storage create --public`.
-    return tigrisPublicUrl(process.env.AWS_ENDPOINT_URL_S3 ?? 'https://fly.storage.tigris.dev', this.bucket, key);
+    return `/images/${key}`;
+  }
+
+  async get(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    try {
+      const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      if (!res.Body) return null;
+      return { buffer: Buffer.from(await res.Body.transformToByteArray()), contentType: res.ContentType ?? 'image/webp' };
+    } catch (e) {
+      if (e instanceof NoSuchKey) return null;
+      throw e;
+    }
   }
 
   async delete(key: string): Promise<void> {
