@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { LocalImageStorage, getImageStorage, tigrisPublicUrl } from './storage';
+import { LocalImageStorage, getImageStorage, isServableImageKey } from './storage';
 
 describe('LocalImageStorage', () => {
   let dir: string;
@@ -41,8 +41,51 @@ describe('getImageStorage', () => {
   });
 });
 
-describe('tigrisPublicUrl', () => {
-  it('uses the bucket-subdomain form Tigris serves public objects from', () => {
-    expect(tigrisPublicUrl('https://fly.storage.tigris.dev', 'my-bucket', 'wiki/a.webp')).toBe('https://my-bucket.fly.storage.tigris.dev/wiki/a.webp');
+describe('LocalImageStorage.get', () => {
+  let dir: string;
+  beforeEach(async () => { dir = await mkdtemp(path.join(tmpdir(), 'wiki-images-')); });
+  afterEach(async () => { await rm(dir, { recursive: true, force: true }); });
+
+  it('returns what was put, with its content type', async () => {
+    const storage = new LocalImageStorage(dir);
+    await storage.put('wiki/a.webp', Buffer.from('bytes'), 'image/webp');
+    const got = await storage.get('wiki/a.webp');
+    expect(got?.buffer.toString()).toBe('bytes');
+    expect(got?.contentType).toBe('image/webp');
+  });
+
+  it('returns null for a missing key', async () => {
+    expect(await new LocalImageStorage(dir).get('wiki/nope.webp')).toBeNull();
+  });
+
+  it('rejects keys that escape the base directory', async () => {
+    await expect(new LocalImageStorage(dir).get('../etc/passwd')).rejects.toThrow();
+  });
+});
+
+describe('put returns an app-served URL', () => {
+  it('is /images/<key>, never a bucket URL', async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), 'wiki-images-'));
+    try {
+      expect(await new LocalImageStorage(dir).put('wiki/x.webp', Buffer.from('a'), 'image/webp')).toBe('/images/wiki/x.webp');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('isServableImageKey', () => {
+  it('allows only keys under the known prefixes', () => {
+    expect(isServableImageKey(['wiki', 'abc.webp'])).toBe(true);
+    expect(isServableImageKey(['tasks', 'abc.webp'])).toBe(true);
+    expect(isServableImageKey(['other', 'abc.webp'])).toBe(false);
+    expect(isServableImageKey(['abc.webp'])).toBe(false);
+  });
+
+  it('rejects traversal and odd segments', () => {
+    expect(isServableImageKey(['wiki', '..', 'secret'])).toBe(false);
+    expect(isServableImageKey(['wiki', '.hidden'])).toBe(false);
+    expect(isServableImageKey(['wiki', 'a/b.webp'])).toBe(false);
+    expect(isServableImageKey(['wiki', ''])).toBe(false);
   });
 });
