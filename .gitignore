@@ -45,3 +45,4 @@ next-env.d.ts
 
 # superpowers scratch workspace (ledgers, task briefs, review packages)
 .superpowers/
+/.data/

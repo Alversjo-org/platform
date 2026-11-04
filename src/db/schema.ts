@@ -349,6 +349,47 @@ export const task = pgTable('task', {
 });
 
 // ---------------------------------------------------------------------------------------------
+// Wiki. Design: docs/superpowers/specs/2026-11-02-wiki-design.md
+
+export type WikiPageStatus = 'published' | 'deleted';
+
+export const wikiPage = pgTable('wiki_page', {
+  id: text('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  content: jsonb('content').notNull(),
+  searchText: text('search_text').notNull().default(''),
+  parentId: text('parent_id').references((): AnyPgColumn => wikiPage.id),
+  position: integer('position').notNull().default(0),
+  status: text('status', { enum: ['published', 'deleted'] }).$type<WikiPageStatus>().notNull().default('published'),
+  version: integer('version').notNull().default(1),
+  createdByUserId: text('created_by_user_id').notNull().references(() => user.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const wikiPageRevision = pgTable('wiki_page_revision', {
+  id: text('id').primaryKey(),
+  pageId: text('page_id').notNull().references(() => wikiPage.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  content: jsonb('content').notNull(),
+  editedByUserId: text('edited_by_user_id').notNull().references(() => user.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const wikiPageComment = pgTable('wiki_page_comment', {
+  id: text('id').primaryKey(),
+  pageId: text('page_id').notNull().references(() => wikiPage.id, { onDelete: 'cascade' }),
+  authorUserId: text('author_user_id').notNull().references(() => user.id),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export type WikiPage = typeof wikiPage.$inferSelect;
+export type WikiPageRevision = typeof wikiPageRevision.$inferSelect;
+export type WikiPageComment = typeof wikiPageComment.$inferSelect;
+
+// ---------------------------------------------------------------------------------------------
 // Utlägg (member outlays): receipts, approval, Fortnox booking and bank-file payouts.
 // Design: docs/superpowers/specs/2026-11-03-expenses-bank-file-design.md
 

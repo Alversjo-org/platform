@@ -48,6 +48,11 @@ export default async function MorePage() {
           { href: '/expenses', label: 'Outlays', hint: 'Get paid back' },
           { href: '/boxes', label: 'Boxes', hint: 'Your cloud dev boxes' },
         ]} />
+        <Group title="Together" rows={[
+          { href: '/wiki', label: 'Wiki', hint: 'The land manual' },
+          { href: '/tasks', label: 'Tasks', hint: 'What needs doing' },
+          { href: '/wishlist', label: 'Wishlist', hint: 'Stuff we want to buy' },
+        ]} />
         <Group title="Run the land" rows={[
           ...(isMemberAdmin(user) ? [{ href: '/members', label: 'Members', hint: 'Who is a member' }] : []),
           ...(hasAnyRole(user, ['admin', 'mapper']) ? [{ href: '/areas', label: 'Areas', hint: 'Draw them on the map' }] : []),
