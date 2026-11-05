@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { resolveDialogTarget } from '@/lib/members/dialog-target';
+import { matchesQuery } from '@/lib/members/filter';
 import { endingSoon } from '@/lib/members/renewals';
 import { listMembers } from '@/lib/members/service';
 import { ROLE_LABELS } from '@/lib/roles/labels';
@@ -16,6 +17,7 @@ import { cn } from 'cn';
 import { syncFromStripeAction } from './actions';
 import { AskRenewals } from './ask-renewals';
 import { MemberPage } from './member-page';
+import { MemberSearch } from './member-search';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,10 +58,9 @@ export default async function MembersPage({
   }
 
   const status: Status = statusRaw === 'inactive' || statusRaw === 'all' ? statusRaw : 'active';
-  const query = (q ?? '').trim().toLowerCase();
   const members = allMembers
     .filter((m) => (status === 'all' ? true : status === 'active' ? m.isActiveMember : !m.isActiveMember))
-    .filter((m) => !query || [m.name, m.nickname ?? '', m.email].some((v) => v.toLowerCase().includes(query)));
+    .filter((m) => matchesQuery(m, q ?? ''));
   const activeCount = allMembers.filter((m) => m.isActiveMember).length;
   const counts: Record<Status, number> = { active: activeCount, inactive: allMembers.length - activeCount, all: allMembers.length };
   const now = new Date();
@@ -101,11 +102,7 @@ export default async function MembersPage({
                 </Link>
               ))}
             </nav>
-            <form className="flex-1" role="search">
-              <input type="hidden" name="status" value={status} />
-              <input name="q" defaultValue={q} placeholder="Search by name, nickname or email" aria-label="Search members"
-                className="h-12 w-full rounded-full border border-white/60 bg-white/70 px-5 text-base shadow-[0_4px_24px_rgb(0_0_0/0.06)] backdrop-blur-md outline-none placeholder:text-ink-soft/80" />
-            </form>
+            <MemberSearch status={status} initialQuery={q ?? ''} />
           </div>
 
           <ul className="glass flex flex-col rounded-[32px] p-2">

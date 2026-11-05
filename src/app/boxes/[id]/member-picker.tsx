@@ -2,15 +2,11 @@
 
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from '@/components/ui/combobox';
 import type { ShareCandidate } from '@/lib/boxes/access';
+import { matchesQuery } from '@/lib/members/filter';
 
 const label = (m: ShareCandidate) => m.name || m.email;
 
-/** Matches on name, nickname or email, so a member can be found without knowing their address. */
-export function matchesQuery(m: ShareCandidate, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return [m.name, m.nickname ?? '', m.email].some((s) => s.toLowerCase().includes(q));
-}
+export { matchesQuery };
 
 /** Submits the chosen member's email as `name`, which is what shareBoxAction reads. */
 export function MemberPicker({ id, name, candidates }: { id: string; name: string; candidates: ShareCandidate[] }) {
