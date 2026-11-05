@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, lt } from 'drizzle-orm';
 import { schema, type Db } from '@/db';
-import type { FortnoxClient, FxFinancialYearData, FxVoucherData } from './client';
+import type { FxSyncRunTrigger } from '@/db/schema';
+import { FortnoxApiError, type FortnoxClient, type FxFinancialYearData, type FxVoucherData } from './client';
+import { getValidAccessToken, markNeedsReauth, NeedsReauthError } from './connection-service';
 
 const SYNC_TOPICS = ['vouchers', 'projects', 'cost-centers', 'financial-years'] as const;
+
+/** A full import takes about 10 minutes; a run this old died with the server (a deploy, a crash). */
+const STALE_RUN_MS = 30 * 60 * 1000;
 
 /** The financial year containing today, plus the one immediately before it (by end date), deduplicated. */
 export function pickRecentFinancialYears(financialYears: FxFinancialYearData[]): FxFinancialYearData[] {
@@ -128,7 +133,7 @@ export async function syncVouchersForYear(db: Db, client: FortnoxClient, accessT
   }
 }
 
-export async function runFirstImport(db: Db, client: FortnoxClient, accessToken: string): Promise<void> {
+export async function runFirstImport(db: Db, client: FortnoxClient, accessToken: string): Promise<number[]> {
   const financialYears = await client.getFinancialYears(accessToken);
   const yearsInScope = pickRecentFinancialYears(financialYears).map((fy) => fy.fortnoxId);
 
@@ -138,4 +143,50 @@ export async function runFirstImport(db: Db, client: FortnoxClient, accessToken:
   }
 
   await recordSyncCompletion(db);
+  return yearsInScope;
+}
+
+/**
+ * Takes the import lock. Returns the new run's id, or null if another run is under way: each run
+ * paces itself to Fortnox's rate limit on its own, so two at once exceed it and fail.
+ */
+export async function claimSyncRun(db: Db, trigger: FxSyncRunTrigger): Promise<string | null> {
+  await db.update(schema.fxSyncRun)
+    .set({ status: 'failed', error: 'Stopped without finishing (the server restarted).', finishedAt: new Date() })
+    .where(and(eq(schema.fxSyncRun.status, 'running'), lt(schema.fxSyncRun.startedAt, new Date(Date.now() - STALE_RUN_MS))));
+  const [run] = await db.insert(schema.fxSyncRun).values({ id: randomUUID(), trigger }).onConflictDoNothing().returning({ id: schema.fxSyncRun.id });
+  return run?.id ?? null;
+}
+
+export type SyncRunResult = { status: 'succeeded'; years: number[] } | { status: 'needs_reauth' } | { status: 'failed'; error: string };
+
+async function finishSyncRun(db: Db, runId: string, error: string | null): Promise<void> {
+  await db.update(schema.fxSyncRun)
+    .set({ status: error ? 'failed' : 'succeeded', error: error?.slice(0, 500) ?? null, finishedAt: new Date() })
+    .where(eq(schema.fxSyncRun.id, runId));
+}
+
+/** Runs a claimed import to the end and records how it went. Never throws. */
+export async function executeSyncRun(db: Db, client: FortnoxClient, runId: string): Promise<SyncRunResult> {
+  try {
+    const accessToken = await getValidAccessToken(db, client);
+    const years = await runFirstImport(db, client, accessToken);
+    await finishSyncRun(db, runId, null);
+    return { status: 'succeeded', years };
+  } catch (error) {
+    if (error instanceof NeedsReauthError || (error instanceof FortnoxApiError && error.status === 401)) {
+      if (error instanceof FortnoxApiError) await markNeedsReauth(db, error.message);
+      await finishSyncRun(db, runId, 'Fortnox stopped accepting our access.');
+      return { status: 'needs_reauth' };
+    }
+    console.error('Fortnox import failed:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    await finishSyncRun(db, runId, message);
+    return { status: 'failed', error: message };
+  }
+}
+
+export async function latestSyncRun(db: Db): Promise<typeof schema.fxSyncRun.$inferSelect | null> {
+  const [run] = await db.select().from(schema.fxSyncRun).orderBy(desc(schema.fxSyncRun.startedAt)).limit(1);
+  return run ?? null;
 }

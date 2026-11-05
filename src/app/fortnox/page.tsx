@@ -5,7 +5,10 @@ import { FinanceTabs } from '@/components/finance-tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { getDb, schema } from '@/db';
+import { AutoRefresh } from '@/components/auto-refresh';
+import { ImportButton } from '@/components/fortnox/import-button';
 import { getConnection } from '@/lib/fortnox/connection-service';
+import { latestSyncRun } from '@/lib/fortnox/sync-service';
 import { requireTreasurer } from '@/lib/session';
 import { cn } from 'cn';
 import { connectAction, disconnectAction, runFirstImportAction } from './actions';
@@ -25,6 +28,8 @@ export default async function FortnoxPage({ searchParams }: { searchParams: Prom
   const db = await getDb();
   const connection = await getConnection(db);
   const syncState = await db.select().from(schema.fxSyncState);
+  const lastRun = await latestSyncRun(db);
+  const importing = lastRun?.status === 'running';
   const { error } = await searchParams;
   const status = connection?.status ?? 'disconnected';
   const [connectedBy] = connection?.connectedByUserId
@@ -35,7 +40,7 @@ export default async function FortnoxPage({ searchParams }: { searchParams: Prom
     <AppShell user={treasurer} theme="dark" backdrop={<Backdrop photo="bonfire" blur={5} wash="linear-gradient(180deg, rgb(10 6 26 / 0.2) 0%, rgb(10 6 26 / 0.7) 100%)" />}>
       <div className="md:px-10">
         <h1 className="font-serif text-[44px] leading-none font-bold md:text-[64px]">Fortnox</h1>
-        <p className="mt-3 text-[17px] text-white/85">A read-only copy of the bookkeeping, refreshed every night at 03:00.</p>
+        <p className="mt-3 text-[17px] text-white/85">A read-only copy of the bookkeeping, refreshed once a day.</p>
         {error && <Alert variant="destructive" className="mt-4"><AlertDescription>Fortnox error: {error}</AlertDescription></Alert>}
         <div className="mt-6"><FinanceTabs active="/fortnox" dark /></div>
       </div>
@@ -51,8 +56,15 @@ export default async function FortnoxPage({ searchParams }: { searchParams: Prom
             {status === 'needs_reauth' && <>Fortnox stopped accepting our access. Last error: {connection?.lastRefreshError ?? 'unknown'}. The budget still works; actual costs are frozen until you reconnect.</>}
             {status === 'disconnected' && <>Connect Fortnox to see what was actually spent next to the budget. You’ll sign in on Fortnox’s own page.</>}
           </p>
+          {importing && (
+            <p role="status" className="text-[15px] text-white/85">
+              <AutoRefresh seconds={10} />
+              Importing from Fortnox since {when(lastRun.startedAt)}. This takes about 10 minutes, and you can leave this page.
+            </p>
+          )}
+          {lastRun?.status === 'failed' && <p role="alert" className="text-[15px] text-white/85">The last import stopped on {when(lastRun.startedAt)}: {lastRun.error}</p>}
           <div className="flex flex-wrap gap-2">
-            {status === 'connected' && <form action={runFirstImportAction}><Button type="submit" variant="outline">Run first import</Button></form>}
+            {status === 'connected' && <form action={runFirstImportAction}><ImportButton running={importing} /></form>}
             <form action={connectAction}><Button type="submit" variant={status === 'connected' ? 'outline' : 'default'}>{status === 'disconnected' ? 'Connect Fortnox' : 'Reconnect'}</Button></form>
             {status === 'connected' && <form action={disconnectAction} className="sm:ml-auto"><Button type="submit" variant="outline">Disconnect</Button></form>}
           </div>

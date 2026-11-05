@@ -1,10 +1,13 @@
-import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, customType, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { FeatureKind } from '@/lib/map/feature-kinds';
 import type { AreaGeometry, FeatureGeometry } from '@/lib/map/geometry';
 
 export type Role = 'admin' | 'member-admin' | 'mapper' | 'role-admin' | 'treasurer' | 'wiki-editor';
 export type FortnoxConnectionStatus = 'connected' | 'needs_reauth' | 'disconnected';
+export type FxSyncRunStatus = 'running' | 'succeeded' | 'failed';
+export type FxSyncRunTrigger = 'manual' | 'nightly';
 export type BoxProfile = 'admin' | 'contributor';
 export type ProjectKind = 'event' | 'ongoing' | 'build' | 'purchase';
 export type ProjectStatus = 'draft' | 'published' | 'cancelled' | 'closed' | 'archived';
@@ -301,6 +304,16 @@ export const fxSyncState = pgTable('fx_sync_state', {
   lastWebsocketOffset: text('last_websocket_offset'),
   lastFullSyncAt: timestamp('last_full_sync_at'),
 });
+
+/** One Fortnox import. The partial unique index is the lock: only one run can be 'running'. */
+export const fxSyncRun = pgTable('fx_sync_run', {
+  id: text('id').primaryKey(),
+  trigger: text('trigger').$type<FxSyncRunTrigger>().notNull(),
+  status: text('status').$type<FxSyncRunStatus>().notNull().default('running'),
+  error: text('error'),
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  finishedAt: timestamp('finished_at'),
+}, (t) => [uniqueIndex('fx_sync_run_one_running').on(t.status).where(sql`${t.status} = 'running'`)]);
 
 export const projectGroup = pgTable('project_group', {
   id: text('id').primaryKey(),
