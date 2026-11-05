@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import { FortnoxApiError, type FortnoxClient } from '@/lib/fortnox/client';
 import { completeConnect } from '@/lib/fortnox/connection-service';
+import { claimSyncRun, latestSyncRun } from '@/lib/fortnox/sync-service';
 
 let db: Db;
 let fakeClientImpl: FortnoxClient;
@@ -76,5 +77,25 @@ describe('POST /api/cron/fortnox-sync', () => {
     expect(await res.json()).toEqual({ error: 'needs_reauth' });
     const [conn] = await db.select().from(schema.fortnoxConnection);
     expect(conn.status).toBe('needs_reauth');
+  });
+
+  it('skips when an import is already running, without touching Fortnox', async () => {
+    const getFinancialYears = vi.fn(async () => []);
+    fakeClientImpl = baseClient({ getFinancialYears });
+    await completeConnect(db, fakeClientImpl, { code: 'c', userId: 'u1' });
+    await claimSyncRun(db, 'manual');
+    const res = await POST(request());
+    expect(await res.json()).toEqual({ skipped: 'already_running' });
+    expect(getFinancialYears).not.toHaveBeenCalled();
+  });
+
+  it('answers 500 and records the error when the import fails', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fakeClientImpl = baseClient({ listVoucherKeys: async () => { throw new Error('boom'); } });
+    await completeConnect(db, fakeClientImpl, { code: 'c', userId: 'u1' });
+    const res = await POST(request());
+    spy.mockRestore();
+    expect(res.status).toBe(500);
+    expect(await latestSyncRun(db)).toMatchObject({ status: 'failed', error: 'boom', trigger: 'nightly' });
   });
 });

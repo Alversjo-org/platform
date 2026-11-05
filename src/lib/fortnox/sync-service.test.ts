@@ -3,7 +3,7 @@ import { unusedWrites } from '@/lib/fortnox/testing';
 import { describe, expect, it } from 'vitest';
 import { createDb, schema, type Db } from '@/db';
 import type { FortnoxClient } from './client';
-import { pickRecentFinancialYears, runFirstImport, syncReferenceData, syncVouchersForYear } from './sync-service';
+import { claimSyncRun, latestSyncRun, pickRecentFinancialYears, runFirstImport, syncReferenceData, syncVouchersForYear } from './sync-service';
 
 function fakeClient(overrides: Partial<FortnoxClient> = {}): FortnoxClient {
   return {
@@ -145,5 +145,26 @@ describe('sync-service', () => {
     await runFirstImport(db, client, 'tok');
     await runFirstImport(db, client, 'tok');
     expect(await db.select().from(schema.fxVoucher)).toHaveLength(1);
+  });
+});
+
+describe('claimSyncRun', () => {
+  it('lets only one run hold the lock, and frees it when the run has finished', async () => {
+    const db = await createDb('pglite://memory');
+    const first = await claimSyncRun(db, 'manual');
+    expect(first).toBeTruthy();
+    expect(await claimSyncRun(db, 'nightly')).toBeNull();
+    await db.update(schema.fxSyncRun).set({ status: 'succeeded' });
+    expect(await claimSyncRun(db, 'nightly')).toBeTruthy();
+  });
+
+  it('gives up on a run left behind by a restart', async () => {
+    const db = await createDb('pglite://memory');
+    await claimSyncRun(db, 'manual');
+    await db.update(schema.fxSyncRun).set({ startedAt: new Date(Date.now() - 31 * 60 * 1000) });
+    expect(await claimSyncRun(db, 'manual')).toBeTruthy();
+    const runs = await db.select().from(schema.fxSyncRun);
+    expect(runs.map((r) => r.status).sort()).toEqual(['failed', 'running']);
+    expect((await latestSyncRun(db))?.status).toBe('running');
   });
 });

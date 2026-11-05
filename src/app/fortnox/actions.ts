@@ -5,8 +5,8 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getDb } from '@/db';
 import { createFortnoxClient } from '@/lib/fortnox/client';
-import { disconnect, getValidAccessToken, startConnect } from '@/lib/fortnox/connection-service';
-import { runFirstImport } from '@/lib/fortnox/sync-service';
+import { disconnect, startConnect } from '@/lib/fortnox/connection-service';
+import { claimSyncRun, executeSyncRun } from '@/lib/fortnox/sync-service';
 import { requireTreasurer } from '@/lib/session';
 
 export async function connectAction(): Promise<void> {
@@ -19,9 +19,9 @@ export async function connectAction(): Promise<void> {
 export async function runFirstImportAction(): Promise<void> {
   await requireTreasurer();
   const db = await getDb();
-  const client = createFortnoxClient();
-  const accessToken = await getValidAccessToken(db, client);
-  await runFirstImport(db, client, accessToken);
+  // An import takes minutes, so it carries on after this request; the page shows its progress.
+  const runId = await claimSyncRun(db, 'manual');
+  if (runId) void executeSyncRun(db, createFortnoxClient(), runId);
   redirect('/fortnox');
 }
 

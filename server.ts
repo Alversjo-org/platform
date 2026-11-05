@@ -44,6 +44,10 @@ async function probeBoxStatus(target: Target): Promise<{ reachable: boolean; nee
   }
 }
 
+// Next.js calls itself when a server action redirects or moves to another page. Behind Fly's
+// proxy it would otherwise use the public https origin against this plain-HTTP port and fail.
+process.env.__NEXT_PRIVATE_ORIGIN ??= internalUrl;
+
 const app = next({ dev, port });
 const handle = app.getRequestHandler();
 
