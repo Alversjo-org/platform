@@ -8,13 +8,14 @@ import { ADMIN_ONLY_ROLES, ROLE_LABELS } from '@/lib/roles/labels';
 import { listPendingRoleRequests } from '@/lib/roles/request-service';
 import { GRANTABLE_ROLES, groupRolesByUserId, listUserRoles } from '@/lib/roles/service';
 import { hasAnyRole, requireRoleAdmin } from '@/lib/session';
-import { decideRoleRequestAction, setUserRoleAction } from './actions';
+import { decideRoleRequestAction } from './actions';
+import { RolesTable } from './roles-table';
 
 export const dynamic = 'force-dynamic';
 
-export default async function RolesPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function RolesPage({ searchParams }: { searchParams: Promise<{ error?: string; q?: string }> }) {
   const actor = await requireRoleAdmin();
-  const { error } = await searchParams;
+  const { error, q } = await searchParams;
   const db = await getDb();
   const members = await listMembers(db);
   const rolesByUserId = groupRolesByUserId(await listUserRoles(db));
@@ -59,41 +60,13 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
           </Table>
         </>
       )}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead><TableHead>Email</TableHead>
-            {GRANTABLE_ROLES.map((role) => <TableHead key={role}>{ROLE_LABELS[role]}</TableHead>)}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {members.map((m) => {
-            const memberRoles = rolesByUserId.get(m.id) ?? [];
-            return (
-              <TableRow key={m.id}>
-                <TableCell>{m.name || m.nickname || '—'}</TableCell>
-                <TableCell>{m.email}</TableCell>
-                {GRANTABLE_ROLES.map((role) => {
-                  const held = memberRoles.includes(role);
-                  if (ADMIN_ONLY_ROLES.includes(role) && !canChangeAdminRoles) {
-                    return <TableCell key={role}>{held ? 'yes' : '—'}</TableCell>;
-                  }
-                  return (
-                    <TableCell key={role}>
-                      <form action={setUserRoleAction}>
-                        <input type="hidden" name="userId" value={m.id} />
-                        <input type="hidden" name="role" value={role} />
-                        <input type="hidden" name="grant" value={held ? 'false' : 'true'} />
-                        <Button type="submit" size="sm" variant={held ? 'ghost' : 'outline'}>{held ? 'Revoke' : 'Grant'}</Button>
-                      </form>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <RolesTable
+        members={members.map((m) => ({ id: m.id, name: m.name, nickname: m.nickname, email: m.email }))}
+        rolesByUserId={Object.fromEntries(rolesByUserId)}
+        roles={GRANTABLE_ROLES.map((role) => ({ role, label: ROLE_LABELS[role], adminOnly: ADMIN_ONLY_ROLES.includes(role) }))}
+        canChangeAdminRoles={canChangeAdminRoles}
+        initialQuery={q ?? ''}
+      />
     </AppShell>
   );
 }
